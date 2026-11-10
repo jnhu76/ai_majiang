@@ -8,13 +8,20 @@ double ms(Clock::duration d) { return std::chrono::duration<double,std::milli>(d
 AiRuntime::AiRuntime(std::unique_ptr<ILlmBackend> llm, std::unique_ptr<ITtsBackend> tts, std::size_t cap)
   : llm_(std::move(llm)),tts_(std::move(tts)),capacity_(cap) {
     if (!llm_ || !tts_ || cap==0) throw std::invalid_argument("backends and queue capacity required");
-    llm_worker_=std::jthread([this](std::stop_token stop){run_llm(stop);});
-    tts_worker_=std::jthread([this](std::stop_token stop){run_tts(stop);});
+    llm_worker_=std::thread([this]{run_llm();});
+    tts_worker_=std::thread([this]{run_tts();});
 }
 AiRuntime::~AiRuntime() {
-    llm_worker_.request_stop(); tts_worker_.request_stop();
+    {
+        // Take the cv mutexes so a worker cannot miss the stop between its
+        // predicate check and blocking in wait().
+        std::scoped_lock lock(llm_mu_,tts_mu_);
+        stopping_.store(true);
+    }
     llm_cv_.notify_all(); tts_cv_.notify_all();
-    // jthread destructors join; providers may finish a non-interruptible call before returning.
+    // std::thread must be joined explicitly; providers may finish a non-interruptible call first.
+    if(llm_worker_.joinable()) llm_worker_.join();
+    if(tts_worker_.joinable()) tts_worker_.join();
 }
 bool AiRuntime::submit(DialogueRequest req) {
     bool accepted=false;
@@ -53,13 +60,13 @@ void AiRuntime::publish(SpeechResult r) {
         results_.push_back(std::move(r));
     }
 }
-void AiRuntime::run_llm(std::stop_token stop) {
-    while(!stop.stop_requested()) {
+void AiRuntime::run_llm() {
+    while(!stopping_.load()) {
         DialogueRequest req;
         {
             std::unique_lock lock(llm_mu_);
-            llm_cv_.wait(lock,stop,[this]{return !llm_queue_.empty();});
-            if(stop.stop_requested()) break;
+            llm_cv_.wait(lock,[this]{return stopping_.load() || !llm_queue_.empty();});
+            if(stopping_.load()) break;
             req=std::move(llm_queue_.front());llm_queue_.pop_front();
         }
         SpeechResult r;
@@ -94,13 +101,13 @@ void AiRuntime::run_llm(std::stop_token stop) {
         }
     }
 }
-void AiRuntime::run_tts(std::stop_token stop) {
-    while(!stop.stop_requested()) {
+void AiRuntime::run_tts() {
+    while(!stopping_.load()) {
         TtsJob job;
         {
             std::unique_lock lock(tts_mu_);
-            tts_cv_.wait(lock,stop,[this]{return !tts_queue_.empty();});
-            if(stop.stop_requested()) break;
+            tts_cv_.wait(lock,[this]{return stopping_.load() || !tts_queue_.empty();});
+            if(stopping_.load()) break;
             job=std::move(tts_queue_.front());tts_queue_.pop_front();
         }
         auto start=Clock::now();job.result.queue_tts_ms=ms(start-job.queued);
