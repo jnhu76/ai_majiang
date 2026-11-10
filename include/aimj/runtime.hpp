@@ -58,7 +58,11 @@ private:
     std::chrono::milliseconds delay_;
 };
 #ifdef AIMJ_WITH_MNN
-std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens);
+// backend_type ("cpu"/"opencl"/... ) and thread_num default to the values in the
+// model config.json when empty/zero; overrides are merged via Llm::set_config
+// before load(), so the pinned model directory itself is never modified.
+std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens,
+                                              const std::string& backend_type = {}, int thread_num = 0);
 #endif
 #ifdef AIMJ_WITH_SHERPA
 std::unique_ptr<ITtsBackend> make_sherpa_vits_backend(

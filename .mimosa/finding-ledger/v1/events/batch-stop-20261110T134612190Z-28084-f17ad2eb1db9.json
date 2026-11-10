@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20261110T134612190Z-28084-f17ad2eb1db9",
+  "runId": "20261110T134612190Z-28084-f17ad2eb1db9",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "baseline_partial",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline capture had enumeration or snapshot errors",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline_partial: baseline capture had enumeration or snapshot errors",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "4fef52199b45c584b6347f3de8eefb9a507cdd56",
+  "diffHash": "b65599f43e0c0994de165806c533cd5445de16450cc7253abce79f0efec052d9",
+  "rulesVersion": "unavailable",
+  "sessionHash": "4078ee138011c99755f664d9de528e8065fef6f59aa9c1b5973185d03e10a973",
+  "reportRef": ".mimosa/reports/task-review-sess_2103a8d7-66f6-43d0-91a7-2fa68253ceba-20261110T134612190Z-28084-f17ad2eb1db9.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "src/mnn_backend.cpp",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "tests/test_main.cpp",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/runtime.cpp",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "src/sherpa_backend.cpp",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "include/aimj/runtime.hpp",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "apps/cli/benchmark.cpp",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-11-10T13:46:12.674Z"
+}

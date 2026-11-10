@@ -38,15 +38,36 @@ private:
 };
 class MnnBackend final : public ILlmBackend {
 public:
-    explicit MnnBackend(const std::string& path, int max_new_tokens)
+    explicit MnnBackend(const std::string& path, int max_new_tokens,
+                        const std::string& backend_type, int thread_num)
         : max_new_tokens_(max_new_tokens) {
         if(path.empty()) throw std::invalid_argument("--mnn-config is required");
         if(max_new_tokens_ <= 0) throw std::invalid_argument("max_new_tokens must be positive");
         model_.reset(MNN::Transformer::Llm::createLLM(path));
         if(!model_) throw std::runtime_error("MNN createLLM failed");
+        if(!backend_type.empty() || thread_num > 0) {
+            // Merge runtime overrides into the parsed config before load(); the
+            // pinned model directory keeps its original config.json on disk.
+            std::string overrides = "{";
+            if(!backend_type.empty()) {
+                if(backend_type != "cpu" && backend_type != "opencl")
+                    throw std::invalid_argument("unsupported backend_type: " + backend_type);
+                overrides += "\"backend_type\": \"" + backend_type + "\"";
+            }
+            if(thread_num > 0) {
+                if(!overrides.empty() && overrides.size() > 1) overrides += ", ";
+                overrides += "\"thread_num\": " + std::to_string(thread_num);
+            }
+            overrides += "}";
+            if(!model_->set_config(overrides))
+                throw std::runtime_error("MNN set_config failed: " + overrides);
+        }
         if(!model_->load()) throw std::runtime_error("MNN model load failed: " + path);
     }
     std::string generate(const std::string& prompt,int) override {
+        // Each dialogue probe call is an independent turn: clear the context so
+        // hundreds of sequential calls cannot drift through hidden KV/history.
+        model_->reset();
         auto start = Clock::now();
         FirstCharStreamBuf buf(start);
         std::ostream out(&buf);
@@ -72,7 +93,8 @@ private:
     std::unique_ptr<MNN::Transformer::Llm> model_;
 };
 }
-std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens) {
-    return std::make_unique<MnnBackend>(config_path, max_new_tokens);
+std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens,
+                                              const std::string& backend_type, int thread_num) {
+    return std::make_unique<MnnBackend>(config_path, max_new_tokens, backend_type, thread_num);
 }
 } // namespace aimj
