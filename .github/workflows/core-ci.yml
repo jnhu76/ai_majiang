@@ -1,0 +1,26 @@
+name: Core C++ CI (no models)
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DAIMJ_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Mock scheduling smoke test
+        shell: bash
+        run: |
+          mkdir -p benchmarks/results
+          if [[ "${{ runner.os }}" == "Windows" ]]; then exe="./build/Release/aimj_bench.exe"; else exe="./build/aimj_bench"; fi
+          "$exe" --events 10 --hz 8 --llm-delay-ms 10 --tts-delay-ms 5 --out benchmarks/results/ci.jsonl
