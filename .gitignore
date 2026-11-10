@@ -17,4 +17,8 @@
 *.log
 benchmarks/results/
 
+# Pinned third-party SDK clones, model weights and prebuilt packages stay local.
+# Provenance and hashes live in docs/experiments/*/model-sha256.txt.
+/third_party/
+
 /build-*/

@@ -80,6 +80,33 @@ static int run() {
         }
         CHECK(Clock::now()-start<2s);
     }
+    { // A failing real backend (e.g. corrupt model at runtime) must degrade to the
+      // fallback line with status=error, and the runtime must keep serving later events.
+        struct ThrowingLlm final : ILlmBackend {
+            int calls=0;
+            std::string generate(const std::string&,int) override {++calls;throw std::runtime_error("model exploded");}
+            std::string name() const override {return "throwing-llm";}
+        };
+        auto* llm=new ThrowingLlm();
+        {
+            AiRuntime rt(std::unique_ptr<ILlmBackend>(llm),std::make_unique<MockTts>(1ms),2);
+            auto req=*director.on_event(b[0],1000ms);
+            const auto fallback=req.fallback_line;
+            req.session_id=1;rt.set_active_session(1);
+            CHECK(rt.submit(req));
+            std::optional<SpeechResult> failed;
+            for(int i=0;i<200 && !failed;i++) {failed=rt.poll();std::this_thread::sleep_for(2ms);}
+            CHECK(failed && failed->status=="error" && failed->text==fallback);
+            CHECK(failed->llm_usage.prompt_tokens==0); // failed calls carry no usage
+            auto again=*director.on_event(b[0],1000ms);
+            again.session_id=1;
+            CHECK(rt.submit(again));
+            std::optional<SpeechResult> second;
+            for(int i=0;i<200 && !second;i++) {second=rt.poll();std::this_thread::sleep_for(2ms);}
+            CHECK(second && second->status=="error"); // runtime survived the first failure
+            CHECK(llm->calls==2);
+        }
+    }
     std::cout << "PASS: state ownership, stale commands, session invalidation, bounded queues, pipeline, clean shutdown\n";
     return 0;
 }

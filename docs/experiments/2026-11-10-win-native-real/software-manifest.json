@@ -1,0 +1,49 @@
+{
+  "experiment": "P0 Windows native real AI bring-up",
+  "date": "2026-11-10",
+  "classification": "REAL (MNN-Pocket CPU + sherpa-onnx VITS CPU); mock results from earlier runs stay marked MOCK",
+  "host": {
+    "cpu": "AMD Ryzen 7 5800H, 8C/16T",
+    "gpu": "AMD Radeon(TM) Graphics (iGPU), driver 31.0.21923.11000",
+    "ram_gb": 28.9,
+    "os": "Windows 11 Pro x64 build 26200"
+  },
+  "toolchain": {
+    "generator": "Visual Studio 17 2022, -A x64 -T v143,host=x64",
+    "msvc": "14.44.35207",
+    "cmake": "4.3.2",
+    "windows_sdk": "10.0.26100.0",
+    "cpp_standard": "C++20",
+    "config": "Release"
+  },
+  "mnn": {
+    "repo": "https://github.com/alibaba/MNN",
+    "commit": "24563667d4c923a6f67591a0132141a84b1e2ebb",
+    "pinned_by": "git fetch --depth 1 origin <sha>",
+    "configure": "-DMNN_BUILD_LLM=ON -DMNN_OPENCL=ON(optional gpu) -DMNN_LLM_BUILD_DEMO=ON -DMNN_BUILD_CONVERTER=OFF -DMNN_BUILD_TRAIN=OFF -DMNN_BUILD_TEST=OFF -DMNN_BUILD_BENCHMARK=OFF -DMNN_BUILD_TOOLS=OFF -DMNN_BUILD_OPENCV=OFF -DMNN_BUILD_AUDIO=OFF -DMNN_IMGCODECS=OFF -DMNN_BUILD_DIFFUSION=OFF",
+    "link_model_windows": "MNN_SEP_BUILD is forced OFF on WIN32; llm engine objects are linked into MNN.dll, so consumers link only the MNN.lib import library",
+    "products": ["MNN.dll", "MNN.lib (import)", "llm_demo.exe", "llm_bench.exe"]
+  },
+  "llm_model": {
+    "name": "taobao-mnn/MNN-Pocket-0.3B-MNN",
+    "hf_revision": "05e05fd35206c6b1f9c662e7c8e56af21cd6b836",
+    "arch": "qwen3, hidden 896, 28 layers, INT4 weights, tie_word_embeddings=true",
+    "tokenizer": "tokenizer.mtok (MNN mtok format)",
+    "hashes": "see model-sha256.txt"
+  },
+  "sherpa_onnx": {
+    "version": "v2.0.1",
+    "package": "sherpa-onnx-v2.0.1-win-x64-shared-MD-Release.tar.bz2 (official prebuilt, MSVC /MD)",
+    "package_sha256": "ce987d5bfca42c74b54f7b3bbaaa8c1febe3c5cd0fea8f94be80ea30e72f1f61",
+    "api": "c-api (SherpaOnnxCreateOfflineTts)",
+    "runtime_dlls": ["sherpa-onnx-c-api.dll", "sherpa-onnx-cxx-api.dll", "onnxruntime.dll", "onnxruntime_providers_shared.dll"]
+  },
+  "tts_model": {
+    "name": "vits-icefall-zh-aishell3",
+    "source": "github.com/k2-fsa/sherpa-onnx releases tag tts-models",
+    "license": "AISHELL-3 corpus Apache-2.0 (218 anonymous speakers), icefall Apache-2.0, sherpa-onnx Apache-2.0",
+    "output_sample_rate_hz": 8000,
+    "speakers_available": 174,
+    "hashes": "see model-sha256.txt"
+  }
+}

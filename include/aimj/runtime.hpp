@@ -15,10 +15,24 @@ struct AudioBuffer {
     int sample_rate{16000};
     std::vector<float> samples;
 };
+// Measured inference breakdown from the most recent generate() call.
+// Mock backends leave everything zeroed; provider identity in the JSONL run
+// record is the authoritative REAL/MOCK classification, with usage as corroboration.
+struct LlmUsage {
+    int prompt_tokens{};
+    int generated_tokens{};
+    double prefill_ms{};
+    double decode_ms{};
+    // Time to first character (TTFC): generate() entry to the first output
+    // character written to the stream. MNN's text API exposes no token-level
+    // timestamps, so TTFC bounds (but is not identical to) time-to-first-token.
+    double ttfc_ms{};
+};
 class ILlmBackend {
 public:
     virtual ~ILlmBackend()=default;
     virtual std::string generate(const std::string& prompt, int speaker) = 0;
+    virtual LlmUsage last_usage() const { return {}; }
     virtual std::string name() const = 0;
 };
 class ITtsBackend {
@@ -44,12 +58,13 @@ private:
     std::chrono::milliseconds delay_;
 };
 #ifdef AIMJ_WITH_MNN
-std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path);
+std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens);
 #endif
 #ifdef AIMJ_WITH_SHERPA
 std::unique_ptr<ITtsBackend> make_sherpa_vits_backend(
     const std::string& model, const std::string& tokens,
-    const std::string& lexicon, int threads);
+    const std::string& lexicon, int threads,
+    const std::string& rule_fars = {});
 #endif
 struct SpeechResult {
     SessionId session_id{};
@@ -63,6 +78,7 @@ struct SpeechResult {
     double queue_tts_ms{};
     double tts_ms{};
     double end_to_end_ms{};
+    LlmUsage llm_usage;
 };
 struct RuntimeCounters {
     std::uint64_t accepted{};
