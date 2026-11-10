@@ -79,7 +79,7 @@ void AiRuntime::run_llm() {
             r.status="timeout";r.text=req.fallback_line;
             r.end_to_end_ms=ms(Clock::now()-req.created);publish(std::move(r));continue;
         }
-        try {r.text=llm_->generate(req.prompt,req.speaker);}
+        try {r.text=llm_->generate(req.prompt,req.speaker);r.llm_usage=llm_->last_usage();}
         catch(...) {r.status="error";r.text=req.fallback_line;}
         auto done=Clock::now();r.llm_ms=ms(done-start);
         if(req.session_id!=active_session_.load()) r.status="stale";

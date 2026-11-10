@@ -27,8 +27,8 @@ namespace {
 struct Opt {
     int events=60, hz=10, llm_delay=30, tts_delay=20, deadline=2000, queue=4, settle_ms=30000;
     std::string out="benchmarks/results/run.jsonl", llm="mock",tts="mock";
-    std::string mnn_config,tts_model,tts_tokens,tts_lexicon;
-    int tts_threads=2;
+    std::string mnn_config,tts_model,tts_tokens,tts_lexicon,tts_rule_fars;
+    int tts_threads=2, mnn_max_tokens=64;
 };
 std::string quote(const std::string& s) {
     std::string out="\"";
@@ -46,7 +46,7 @@ Opt parse(int argc,char**argv) {
     for(int i=1;i<argc;i++) {
         auto key=std::string(argv[i]);
         if(key=="--help") {
-            std::cout<<"aimj_bench options: --events N --hz N --llm-delay-ms N --tts-delay-ms N --deadline-ms N --queue N --settle-ms N --out PATH --llm mock|mnn --tts mock|sherpa --mnn-config PATH --tts-model PATH --tts-tokens PATH --tts-lexicon PATH --tts-threads N\n";
+            std::cout<<"aimj_bench options: --events N --hz N --llm-delay-ms N --tts-delay-ms N --deadline-ms N --queue N --settle-ms N --out PATH --llm mock|mnn --tts mock|sherpa --mnn-config PATH --mnn-max-tokens N --tts-model PATH --tts-tokens PATH --tts-lexicon PATH --tts-rule-fars PATH --tts-threads N\n";
             std::exit(0);
         }
         if(i+1>=argc) throw std::invalid_argument("missing value for "+key);
@@ -66,9 +66,11 @@ Opt parse(int argc,char**argv) {
         else if(key=="--tts-tokens") o.tts_tokens=v;
         else if(key=="--tts-lexicon") o.tts_lexicon=v;
         else if(key=="--tts-threads") o.tts_threads=std::stoi(v);
+        else if(key=="--tts-rule-fars") o.tts_rule_fars=v;
+        else if(key=="--mnn-max-tokens") o.mnn_max_tokens=std::stoi(v);
         else throw std::invalid_argument("unknown option "+key);
     }
-    if(o.events<1 || o.hz<1 || o.deadline<1 || o.queue<1 || o.settle_ms<1 || o.llm_delay<0 || o.tts_delay<0 || o.tts_threads<1)
+    if(o.events<1 || o.hz<1 || o.deadline<1 || o.queue<1 || o.settle_ms<1 || o.llm_delay<0 || o.tts_delay<0 || o.tts_threads<1 || o.mnn_max_tokens<1)
         throw std::invalid_argument("invalid numeric options");
     return o;
 }
@@ -104,12 +106,12 @@ int main(int argc,char**argv) {
         std::unique_ptr<ITtsBackend> tts;
         if(o.llm=="mock") llm=std::make_unique<MockLlm>(std::chrono::milliseconds(o.llm_delay));
 #ifdef AIMJ_WITH_MNN
-        else if(o.llm=="mnn") llm=make_mnn_backend(o.mnn_config);
+        else if(o.llm=="mnn") llm=make_mnn_backend(o.mnn_config,o.mnn_max_tokens);
 #endif
         else throw std::invalid_argument("LLM provider unavailable: "+o.llm);
         if(o.tts=="mock") tts=std::make_unique<MockTts>(std::chrono::milliseconds(o.tts_delay));
 #ifdef AIMJ_WITH_SHERPA
-        else if(o.tts=="sherpa") tts=make_sherpa_vits_backend(o.tts_model,o.tts_tokens,o.tts_lexicon,o.tts_threads);
+        else if(o.tts=="sherpa") tts=make_sherpa_vits_backend(o.tts_model,o.tts_tokens,o.tts_lexicon,o.tts_threads,o.tts_rule_fars);
 #endif
         else throw std::invalid_argument("TTS provider unavailable: "+o.tts);
         auto init_ms=std::chrono::duration<double,std::milli>(Clock::now()-provider_init_start).count();
@@ -150,12 +152,24 @@ int main(int argc,char**argv) {
                 <<"{\"type\":\"event\",\"session_id\":"<<result->session_id
                 <<",\"event_id\":"<<result->event_id<<",\"speaker\":"<<result->speaker
                 <<",\"status\":"<<quote(result->status)
+                <<",\"mock\":"<<(simulated?"true":"false")
                 <<",\"queue_llm_ms\":"<<result->queue_llm_ms
                 <<",\"llm_ms\":"<<result->llm_ms
+                <<",\"llm_prompt_tokens\":"<<result->llm_usage.prompt_tokens
+                <<",\"llm_gen_tokens\":"<<result->llm_usage.generated_tokens
+                <<",\"llm_prefill_ms\":"<<result->llm_usage.prefill_ms
+                <<",\"llm_decode_ms\":"<<result->llm_usage.decode_ms
+                <<",\"llm_ttft_ms\":"<<result->llm_usage.ttft_ms
                 <<",\"queue_tts_ms\":"<<result->queue_tts_ms
                 <<",\"tts_ms\":"<<result->tts_ms
                 <<",\"end_to_end_ms\":"<<result->end_to_end_ms
-                <<",\"pcm_samples\":"<<result->audio.samples.size()<<"}\n";
+                <<",\"pcm_samples\":"<<result->audio.samples.size();
+            if(result->audio.sample_rate>0 && !result->audio.samples.empty()) {
+                auto audio_s=result->audio.samples.size()/static_cast<double>(result->audio.sample_rate);
+                file<<",\"tts_audio_s\":"<<audio_s
+                    <<",\"tts_rtf\":"<<(result->tts_ms/1000.0)/audio_s;
+            }
+            file<<"}\n";
         }
         auto stats=runtime.counters();
         auto missing=o.events-rejected-completed;

@@ -15,10 +15,21 @@ struct AudioBuffer {
     int sample_rate{16000};
     std::vector<float> samples;
 };
+// Measured inference breakdown from the most recent generate() call.
+// Mock backends leave everything zeroed, so JSONL records with non-zero
+// token counts are provably from a real model.
+struct LlmUsage {
+    int prompt_tokens{};
+    int generated_tokens{};
+    double prefill_ms{};
+    double decode_ms{};
+    double ttft_ms{}; // generate() entry to first output character.
+};
 class ILlmBackend {
 public:
     virtual ~ILlmBackend()=default;
     virtual std::string generate(const std::string& prompt, int speaker) = 0;
+    virtual LlmUsage last_usage() const { return {}; }
     virtual std::string name() const = 0;
 };
 class ITtsBackend {
@@ -44,12 +55,13 @@ private:
     std::chrono::milliseconds delay_;
 };
 #ifdef AIMJ_WITH_MNN
-std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path);
+std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens);
 #endif
 #ifdef AIMJ_WITH_SHERPA
 std::unique_ptr<ITtsBackend> make_sherpa_vits_backend(
     const std::string& model, const std::string& tokens,
-    const std::string& lexicon, int threads);
+    const std::string& lexicon, int threads,
+    const std::string& rule_fars = {});
 #endif
 struct SpeechResult {
     SessionId session_id{};
@@ -63,6 +75,7 @@ struct SpeechResult {
     double queue_tts_ms{};
     double tts_ms{};
     double end_to_end_ms{};
+    LlmUsage llm_usage;
 };
 struct RuntimeCounters {
     std::uint64_t accepted{};

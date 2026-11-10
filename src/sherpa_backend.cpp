@@ -7,13 +7,15 @@ namespace {
 class SherpaVitsBackend final : public ITtsBackend {
 public:
     SherpaVitsBackend(const std::string& model,const std::string& tokens,
-                      const std::string& lexicon,int threads) {
+                      const std::string& lexicon,int threads,
+                      const std::string& rule_fars) {
         if(model.empty() || tokens.empty()) throw std::invalid_argument("TTS model and tokens required");
         SherpaOnnxOfflineTtsConfig config{};
         config.model.vits.model=model.c_str();
         config.model.vits.tokens=tokens.c_str();
         config.model.vits.lexicon=lexicon.c_str();
         config.model.num_threads=threads;
+        config.rule_fars=rule_fars.c_str();
         tts_=SherpaOnnxCreateOfflineTts(&config);
         if(!tts_) throw std::runtime_error("SherpaOnnxCreateOfflineTts failed");
     }
@@ -33,7 +35,8 @@ private:
 };
 }
 std::unique_ptr<ITtsBackend> make_sherpa_vits_backend(
-    const std::string& model,const std::string& tokens,const std::string& lexicon,int threads) {
-    return std::make_unique<SherpaVitsBackend>(model,tokens,lexicon,threads);
+    const std::string& model,const std::string& tokens,const std::string& lexicon,int threads,
+    const std::string& rule_fars) {
+    return std::make_unique<SherpaVitsBackend>(model,tokens,lexicon,threads,rule_fars);
 }
 } // namespace aimj
