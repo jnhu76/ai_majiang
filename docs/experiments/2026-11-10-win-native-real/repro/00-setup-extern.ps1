@@ -41,18 +41,21 @@ function Fetch-Verified([string]$url, [string]$out, [string]$sha256) {
 }
 
 # Extract an archive only into its destination: missing -> extract; complete -> reuse;
-# incomplete -> remove only our own extraction target and re-extract from the
-# hash-verified archive (never touches anything outside that directory).
+# incomplete -> remove only the archive's own top-level directory ($root) and
+# re-extract from the hash-verified archive. $dest may be a shared parent
+# (e.g. third_party\models also holds the LLM weights) and is NEVER deleted.
 function Ensure-Extracted([string]$archive, [string]$dest, [string]$markerChild, [string[]]$requiredFiles) {
     $root = Join-Path $dest $markerChild
     $complete = ($requiredFiles | ForEach-Object { Test-Path (Join-Path $root $_) }) -notcontains $false
     if ($complete) { Write-Output "reuse complete extraction: $root"; return }
-    if (Test-Path $dest) {
-        Write-Warning "incomplete extraction, re-extracting from verified archive: $dest"
-        Remove-Item $dest -Recurse -Force
+    if (Test-Path -LiteralPath $root) {
+        Write-Warning "incomplete extraction, re-extracting from verified archive: $root"
+        Remove-Item -LiteralPath $root -Recurse -Force
     }
     New-Item -ItemType Directory -Force $dest | Out-Null
-    tar xf $archive -C $dest
+    # Use the Windows system bsdtar explicitly: a GNU tar earlier in PATH
+    # (e.g. Git for Windows) rejects "C:\..." in -C as a remote hostname.
+    & "$env:SystemRoot\System32\tar.exe" xf $archive -C $dest
     if ($LASTEXITCODE -ne 0) { throw "extraction failed: $archive" }
     if ((($requiredFiles | ForEach-Object { Test-Path (Join-Path $root $_) }) -notcontains $false)) {
         Write-Output "extracted: $root"
