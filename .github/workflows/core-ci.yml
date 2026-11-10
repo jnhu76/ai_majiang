@@ -1,8 +1,16 @@
 name: Core C++ CI (no models)
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - dev
+      - "prototype/**"
+      - "feature/**"
+      - "fix/**"
   pull_request:
+    branches: [dev, main]
+permissions:
+  contents: read
 jobs:
   core:
     strategy:
