@@ -69,5 +69,13 @@ int main() {
         CHECK(std::string(magic,4)=="RIFF");
         std::filesystem::remove(path);
     }
-    std::cout << "PASS: state ownership, stale commands, session invalidation, bounded queues, pipeline\n";
+    { // Idle workers must be woken and joined on destruction, without hanging.
+        const auto start=Clock::now();
+        {
+            AiRuntime rt(std::make_unique<MockLlm>(1ms),std::make_unique<MockTts>(1ms),2);
+            CHECK(rt.backlog()==0);
+        }
+        CHECK(Clock::now()-start<2s);
+    }
+    std::cout << "PASS: state ownership, stale commands, session invalidation, bounded queues, pipeline, clean shutdown\n";
 }

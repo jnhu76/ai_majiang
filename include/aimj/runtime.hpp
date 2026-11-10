@@ -89,8 +89,8 @@ public:
     std::string tts_name() const { return tts_->name(); }
 private:
     struct TtsJob { DialogueRequest request; SpeechResult result; Clock::time_point queued; };
-    void run_llm(std::stop_token stop);
-    void run_tts(std::stop_token stop);
+    void run_llm();
+    void run_tts();
     void publish(SpeechResult result);
     std::unique_ptr<ILlmBackend> llm_;
     std::unique_ptr<ITtsBackend> tts_;
@@ -102,6 +102,7 @@ private:
     std::deque<TtsJob> tts_queue_;
     std::deque<SpeechResult> results_;
     RuntimeCounters counts_{};
-    std::jthread llm_worker_,tts_worker_;
+    std::atomic<bool> stopping_{false};
+    std::thread llm_worker_,tts_worker_;
 };
 } // namespace aimj
