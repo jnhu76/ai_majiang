@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include "aimj/wav.hpp"
-#define CHECK(expr) do { if (!(expr)) throw std::runtime_error("CHECK failed: " #expr); } while(false)
+#define CHECK(expr) do { if (!(expr)) { std::cerr << "CHECK failed: " #expr << " (line " << __LINE__ << ")\n"; throw std::runtime_error("CHECK failed: " #expr); } } while(false)
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -15,7 +15,7 @@ using namespace aimj;
 static Action button(const GameSession& s,int tile=3) {
     return Action{.kind=ActionKind::TapDemoTile,.seat=0,.tile=tile,.expected_version=s.state().version};
 }
-int main() {
+static int run() {
     GameSession game(std::make_unique<DemoRuleSet>());
     auto a=game.submit(button(game));
     CHECK(a.size()==1 && a[0].event_id==1 && a[0].state_version==1);
@@ -64,9 +64,12 @@ int main() {
         auto path=(std::filesystem::temp_directory_path()/"aimj_test.wav").string();
         auto buffer=MockTts(0ms).synthesize("hello",1);
         write_pcm16_wav(path,buffer);
-        std::ifstream f(path,std::ios::binary);
-        char magic[4]{};f.read(magic,4);
-        CHECK(std::string(magic,4)=="RIFF");
+        {
+            std::ifstream f(path,std::ios::binary);
+            char magic[4]{};f.read(magic,4);
+            CHECK(std::string(magic,4)=="RIFF");
+        }
+        // Windows cannot delete a file while a handle is still open.
         std::filesystem::remove(path);
     }
     { // Idle workers must be woken and joined on destruction, without hanging.
@@ -78,4 +81,9 @@ int main() {
         CHECK(Clock::now()-start<2s);
     }
     std::cout << "PASS: state ownership, stale commands, session invalidation, bounded queues, pipeline, clean shutdown\n";
+    return 0;
+}
+int main() {
+    try { return run(); }
+    catch(const std::exception& e) { std::cerr << "FAIL: " << e.what() << '\n'; return 1; }
 }

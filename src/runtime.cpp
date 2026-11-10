@@ -12,7 +12,12 @@ AiRuntime::AiRuntime(std::unique_ptr<ILlmBackend> llm, std::unique_ptr<ITtsBacke
     tts_worker_=std::thread([this]{run_tts();});
 }
 AiRuntime::~AiRuntime() {
-    stopping_.store(true);
+    {
+        // Take the cv mutexes so a worker cannot miss the stop between its
+        // predicate check and blocking in wait().
+        std::scoped_lock lock(llm_mu_,tts_mu_);
+        stopping_.store(true);
+    }
     llm_cv_.notify_all(); tts_cv_.notify_all();
     // std::thread must be joined explicitly; providers may finish a non-interruptible call first.
     if(llm_worker_.joinable()) llm_worker_.join();
