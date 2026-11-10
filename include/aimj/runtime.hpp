@@ -16,14 +16,17 @@ struct AudioBuffer {
     std::vector<float> samples;
 };
 // Measured inference breakdown from the most recent generate() call.
-// Mock backends leave everything zeroed, so JSONL records with non-zero
-// token counts are provably from a real model.
+// Mock backends leave everything zeroed; provider identity in the JSONL run
+// record is the authoritative REAL/MOCK classification, with usage as corroboration.
 struct LlmUsage {
     int prompt_tokens{};
     int generated_tokens{};
     double prefill_ms{};
     double decode_ms{};
-    double ttft_ms{}; // generate() entry to first output character.
+    // Time to first character (TTFC): generate() entry to the first output
+    // character written to the stream. MNN's text API exposes no token-level
+    // timestamps, so TTFC bounds (but is not identical to) time-to-first-token.
+    double ttfc_ms{};
 };
 class ILlmBackend {
 public:

@@ -6,20 +6,23 @@
 #include <stdexcept>
 namespace aimj {
 namespace {
-// Records the moment the first generated character is written, which yields a
-// measured time-to-first-token rather than a derived or fabricated value.
-class FirstTokenStreamBuf final : public std::stringbuf {
+// Records the moment the first generated character is written to the output
+// stream, which yields a measured time-to-first-character (TTFC). MNN's text
+// response API exposes no token-level timestamps (LlmContext::ttfa_us is only
+// populated on the omni/multimodal path), so TTFC bounds the true first token.
+// Zero-length writes and EOF are not output and must not start the clock.
+class FirstCharStreamBuf final : public std::stringbuf {
 public:
-    explicit FirstTokenStreamBuf(Clock::time_point start) : start_(start) {}
-    std::chrono::duration<double, std::milli> first_token_ms() const { return first_ms_; }
+    explicit FirstCharStreamBuf(Clock::time_point start) : start_(start) {}
+    std::chrono::duration<double, std::milli> first_char_ms() const { return first_ms_; }
     bool got_first() const { return got_first_; }
 protected:
     std::streamsize xsputn(const char* s, std::streamsize n) override {
-        mark_first();
+        if (n > 0) mark_first();
         return std::stringbuf::xsputn(s, n);
     }
     int_type overflow(int_type ch) override {
-        mark_first();
+        if (ch != traits_type::eof()) mark_first();
         return std::stringbuf::overflow(ch);
     }
 private:
@@ -45,7 +48,7 @@ public:
     }
     std::string generate(const std::string& prompt,int) override {
         auto start = Clock::now();
-        FirstTokenStreamBuf buf(start);
+        FirstCharStreamBuf buf(start);
         std::ostream out(&buf);
         // MNN applies the model's chat template to this plain user content.
         model_->response(prompt, &out, nullptr, max_new_tokens_);
@@ -54,7 +57,7 @@ public:
             ctx->prompt_len, ctx->gen_seq_len,
             static_cast<double>(ctx->prefill_us) / 1000.0,
             static_cast<double>(ctx->decode_us) / 1000.0,
-            buf.got_first() ? buf.first_token_ms().count() : 0.0};
+            buf.got_first() ? buf.first_char_ms().count() : 0.0};
         // A silently empty response must surface as an error, not as a line of dialogue.
         std::string text = buf.str();
         if(text.empty() || usage_.generated_tokens <= 0)

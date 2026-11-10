@@ -26,11 +26,11 @@ Official `llm_bench -pg 64,32 -rep 3` (CPU INT4, ± = std over 3 reps):
 | 2 | 283–328 | 93 | 310–327 / 89–93 tok/s |
 | 1 | 173–201 | 66 | 186–202 / 59–67 tok/s |
 
-Full matrix (threads 1/2/4/8 × pg 32,16 / 64,32 / 128,32 / 256,32 / 64,64, 3 reps, JSON output): kept locally at `benchmarks/results/mnn-bench/llm_bench_matrix.{json,log}`.
+Full matrix (threads 1/2/4/8 × pg 32,16 / 64,32 / 128,32 / 256,32 / 64,64, 3 reps, JSON output): kept locally at `benchmarks/results/mnn-bench/llm_bench_matrix.{json,log}`. The JSON holds **28 result rows**: 20 `prefill_and_decode` rows (4 thread counts × 5 pg configs) + 4 standalone `prefill` rows (pp512) + 4 standalone `decode` rows (tg128); every row is the mean±std over 3 reps, i.e. 84 raw measurements aggregated into 28 rows.
 
 - Cold model load: **0.72 ± 0.02 s** (163.54 MiB weights, `llm_bench -load true`)
 - Peak memory of `llm_demo` (100 ms sampling): **≈250 MB working set / ≈286 MB private bytes**
-- Measured TTFT (first emitted character, `aimj_bench` instrumented): 97–147 ms median 117 ms at ~56-token templated prompt
+- Measured **TTFC** — time to first character at the C++ output-stream boundary, `aimj_bench` instrumented: 97–147 ms, median 117 ms, at ~56-token templated prompt. MNN's text `response()` API exposes no token-level timestamps (`LlmContext::ttfa_us` is populated only on the omni/multimodal path), so this bounds — but is not identical to — a strict time-to-first-token.
 
 ## C. TTS (REAL — PASS)
 
@@ -53,9 +53,10 @@ All 9 WAVs are non-empty (`wave` module verified: 1 ch, 8000 Hz, 16-bit). Speake
 - `mode="real"`, every event record carries `mock:false`, and non-zero `llm_prompt_tokens/llm_gen_tokens` (mock runs emit `mock:true` + zero usage — the two result classes cannot be confused)
 - **20/20 offered=accepted=completed=ok**, 0 rejected / expired / stale / failed
 - E2E (LLM→PCM) min/median/max **186/284/344 ms** (target ≤2000 ms)
-- Real measured per event: `llm_ttft_ms` 97–147, `llm_prefill_ms` ~103, `llm_decode_ms` 77–101, `tts_ms` 74–140, `tts_rtf` 0.035–0.083
+- Re-verification run after the reproducibility fixes (fresh `build-real`, schema 2 JSONL): 20/20 ok again, `run_mode=real` + `llm_provider=mnn` + `tts_provider=sherpa`, TTFC 169–212 ms, E2E p95 577 ms — same classification, higher latency attributed to this machine's load state during the gate rerun (both runs' raw JSONL kept locally in `benchmarks/results/real-win/`).
+- Real measured per event: `llm_ttfc_ms` 97–147, `llm_prefill_ms` ~103, `llm_decode_ms` 77–101, `tts_ms` 74–140, `tts_rtf` 0.035–0.083 (RTF = synthesis wall time ÷ produced audio duration)
 - Peak process RSS 558 MB; provider init 4.4 s (both models)
-- Instrumentation added (not fabricated): `ILlmBackend::last_usage()` → `prompt_tokens/generated_tokens/prefill_ms/decode_ms/ttft_ms`; MNN values come from `Llm::getContext()`, TTFT from a first-character stream timestamp; mock backends keep zeros. New regression test: a throwing LLM backend degrades to `status=error` + fallback text, no audio, and the runtime keeps serving later events (CTest 1/1 on both `build-real` and mock `build-win-x64`).
+- Instrumentation added (not fabricated): `ILlmBackend::last_usage()` → `prompt_tokens/generated_tokens/prefill_ms/decode_ms/ttfc_ms`; MNN values come from `Llm::getContext()`, TTFC from a first-character stream timestamp; mock backends keep zeros. JSONL run records carry explicit `llm_provider`/`tts_provider`/`run_mode` (real/mixed/mock); per-event `mock` means "this run contains a mock component", and `llm_mock`/`tts_mock` name which one — REAL/MOCK is classified by provider selection, never inferred from token counts (a real model can also fail with zero tokens, which surfaces as `status=error`). New regression test: a throwing LLM backend degrades to `status=error` + fallback text, no audio, and the runtime keeps serving later events (CTest 1/1 on both `build-real` and mock `build-win-x64`).
 - Design guards verified: MNN output capped by `max_new_tokens`; empty generation throws; model chat template applied by MNN `response()`; TTS sid = speaker−1 against `speakers.txt`; LLM/TTS run on dedicated runtime workers (game thread only submits/polls); bounded queues, deadline + stale checks drop late work without playback; no silent mock fallback — provider selection is explicit CLI and unavailable providers exit with an error. LLM thread count is configured via the model's `config.json` `thread_num` (standard MNN mechanism); TTS threads via `--tts-threads`. GameSession remains the sole rules authority; backends only produce dialogue text/audio.
 
 ## E. GPU / AMD iGPU (REAL — PASS, decode not beneficial)
@@ -68,20 +69,20 @@ AMD Radeon(TM) Graphics driver 31.0.21923.11000 exposes OpenCL; `OpenCL.dll` pre
 | CPU 4T | 372 tok/s | 120 tok/s | 100 tok/s decode |
 | **OpenCL 4T** | **759–924 tok/s** | 64–82 tok/s | 544/78 tok/s |
 
-No-CPU-fallback evidence: `llm_bench` process GPU dedicated-memory peak **257 MB**, shared 245 MB, **GPU engine utilization peak 98.8%** (per-PID counters), prefill 1.6× over best CPU — a CPU-only run cannot exceed the CPU-only ceiling. OpenCL kernel cache (`mnn_cachefile.bin`, ~3.7 MB) is generated on first run; the `Can't open file:tmp/mnn_cachefile.bin` line is the first-run cache miss, harmless.
+GPU-participation evidence (bounded claim): `llm_bench -a opencl` selected the OpenCL backend at startup (run log), and the process accumulated **257 MB** GPU dedicated-memory with **98.8%** GPU engine utilization peaks (per-PID counters) while prefill ran 1.6× faster than the best CPU run — a CPU-only execution cannot exceed the CPU-only ceiling, so the measured work demonstrably executed on the iGPU. These counters alone do not prove that no CPU code path participated anywhere in the pipeline; that stronger claim would require kernel-level tracing (out of P0 scope). OpenCL kernel cache (`mnn_cachefile.bin`, ~3.7 MB) is generated on first run; the `Can't open file:tmp/mnn_cachefile.bin` line is the first-run cache miss, harmless.
 
-**Decision: keep CPU as the integrated default.** iGPU prefill gains ~60% but decode loses 20–35% (GEMV-bound on shared-memory bandwidth), so real dialogue latency does not improve. Raw logs: `benchmarks/results/mnn-bench/llm_bench_opencl.json`, `opencl_gpumem_run.log`.
+**Decision: keep CPU as the integrated default.** iGPU prefill gains ~60% but decode loses 20–35%. A plausible explanation is GEMV being bound by iGPU shared-memory bandwidth, but this has **not been confirmed by profiling** and is stated here as hypothesis, not root cause. Raw logs: `benchmarks/results/mnn-bench/llm_bench_opencl.json`, `opencl_gpumem_run.log`.
 
 ## F. Deliverables
 
 - Branch `p0/win-native-real-ai` (from `dev`), integration commit + PR → `dev`
 - Code: usage instrumentation (`runtime.hpp`, `runtime.cpp`, `mnn_backend.cpp`), `rule_fars` + token cap (`sherpa_backend.cpp`, `benchmark.cpp`), regression test (`tests/test_main.cpp`), `.gitignore` additions, this report + manifests + repro scripts
-- Reproduce (run from repo root, in order): `docs/experiments/2026-11-10-win-native-real/repro/00-setup-extern.ps1`, `01-build-mnn.ps1`, `02-run-tts.ps1`, `03-run-integration.ps1`. SDK clones, model weights and prebuilt packages live in an **external root** `..\ai_majiang-extern\third_party` (outside the repository working tree — third-party sources are untrusted downloaded data and are not committed); hashes and provenance in [model-sha256.txt](model-sha256.txt).
+- Reproduce (run from anywhere; scripts derive the repo/SDK roots from their own location): `docs/experiments/2026-11-10-win-native-real/repro/00-setup-extern.ps1`, `01-build-mnn.ps1`, `02-run-tts.ps1`, `03-run-integration.ps1`. The scripts pin every asset (MNN commit, HF model revision `05e05fd35206c6b1f9c662e7c8e56af21cd6b836` — never `/resolve/main`, sherpa-onnx v2.0.1 release, tts-models tag), verify each download by SHA-256 against [model-sha256.txt](model-sha256.txt), abort on download failure or hash mismatch, and take an HTTP(S) proxy only from ambient environment variables (never hardcoded; TLS verification stays on). SDK clones, model weights and prebuilt packages live in an **external root** `<repo sibling>\ai_majiang-extern\third_party` (outside the repository working tree — third-party sources are untrusted downloaded data and are not committed).
 - Local raw artifacts (not committed): `benchmarks/results/{mnn-bench,tts,real-win}`, `p0-hardware.json`
 
 ## G. Remaining blockers / limitations
 
 - sherpa-onnx linked as the official prebuilt shared /MD package; a static or MT-runtime build would need a source build (not needed for the P0 evidence).
-- LLM decode is sampled wall speed; per-token streaming timestamps inside MNN are engine-internal (TTFT measured at output boundary instead).
-- iGPU decode regression is a bandwidth limitation of this iGPU class; revisit only if a future hybrid prefill-GPU/decode-CPU scheduler is desired (out of P0 scope).
+- LLM decode is sampled wall speed; per-token streaming timestamps inside MNN are engine-internal (TTFC is measured at the output-stream boundary and bounds the true first token).
+- iGPU decode regression plausibly stems from shared-memory bandwidth, unconfirmed by profiling; revisit only if a future hybrid prefill-GPU/decode-CPU scheduler is desired (out of P0 scope).
 - TTS output is 8 kHz (model-intrinsic); game audio pipeline must resample if it expects 16 kHz+.

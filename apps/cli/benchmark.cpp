@@ -123,7 +123,11 @@ int main(int argc,char**argv) {
         std::ofstream file(o.out);
         if(!file) throw std::runtime_error("cannot open output file: "+o.out+" (create parent directory first)");
         const bool simulated=(o.llm=="mock" || o.tts=="mock");
-        file<<"{\"type\":\"run\",\"schema\":1,\"mode\":"<<quote(simulated?"contains_mock":"real")
+        const char* run_mode=!simulated?"real":(o.llm=="mock" && o.tts=="mock"?"mock":"mixed");
+        file<<"{\"type\":\"run\",\"schema\":2,\"mode\":"<<quote(simulated?"contains_mock":"real")
+            <<",\"run_mode\":"<<quote(run_mode)
+            // Explicit provider classification: "mock" anywhere means the run contains mock.
+            <<",\"llm_provider\":"<<quote(o.llm)<<",\"tts_provider\":"<<quote(o.tts)
             <<",\"llm\":"<<quote(llm_name)<<",\"tts\":"<<quote(tts_name)
             <<",\"events\":"<<o.events<<",\"hz\":"<<o.hz<<",\"queue\":"<<o.queue
             <<",\"deadline_ms\":"<<o.deadline<<",\"provider_init_ms\":"<<init_ms<<"}\n";
@@ -152,14 +156,18 @@ int main(int argc,char**argv) {
                 <<"{\"type\":\"event\",\"session_id\":"<<result->session_id
                 <<",\"event_id\":"<<result->event_id<<",\"speaker\":"<<result->speaker
                 <<",\"status\":"<<quote(result->status)
+                // "mock" = this run contains a mock component (kept for schema 1 readers);
+                // llm_mock/tts_mock name which component.
                 <<",\"mock\":"<<(simulated?"true":"false")
+                <<",\"llm_mock\":"<<(o.llm=="mock"?"true":"false")
+                <<",\"tts_mock\":"<<(o.tts=="mock"?"true":"false")
                 <<",\"queue_llm_ms\":"<<result->queue_llm_ms
                 <<",\"llm_ms\":"<<result->llm_ms
                 <<",\"llm_prompt_tokens\":"<<result->llm_usage.prompt_tokens
                 <<",\"llm_gen_tokens\":"<<result->llm_usage.generated_tokens
                 <<",\"llm_prefill_ms\":"<<result->llm_usage.prefill_ms
                 <<",\"llm_decode_ms\":"<<result->llm_usage.decode_ms
-                <<",\"llm_ttft_ms\":"<<result->llm_usage.ttft_ms
+                <<",\"llm_ttfc_ms\":"<<result->llm_usage.ttfc_ms
                 <<",\"queue_tts_ms\":"<<result->queue_tts_ms
                 <<",\"tts_ms\":"<<result->tts_ms
                 <<",\"end_to_end_ms\":"<<result->end_to_end_ms
