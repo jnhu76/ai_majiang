@@ -1,0 +1,60 @@
+# UTF-8 TSV, no header. Columns: line_id, event_type, fact_key, speaker(1..3),
+# persona_id, emotion, text, tts_sid, audio_file, weight.
+# Every row is a curated, pre-approved line. fact_key must equal the public event
+# fact; there is no wildcard for tile-bearing events. tts_sid must match speaker
+# (1->8, 2->9, 3->10). Audio lives under --audio-dir and is hash-checked by
+# p2_bank_build.py.
+p1_long_a	discard	tile:9tong	1	du	playful	刚才那张九筒打得漂亮，这下我家的牌也好看起来了	8	long_a.wav	2
+p2_9tong_s1_b	discard	tile:9tong	1	du	excited	九筒九筒，牌运到啦！	8	p2_9tong_s1_b.wav	1
+p1_event_react_d3	discard	tile:9tong	3	danding	calm	九筒都出来了，这局面有意思。	10	event_react_d3.wav	2
+p2_9tong_s3_b	discard	tile:9tong	3	danding	amused	九筒，好牌好牌！	10	p2_9tong_s3_b.wav	1
+p1_persona_jiji	draw	draw:unknown	2	jiji	impatient	哎呀呀，快出快出，别让大家等急了！	9	persona_jiji_line.wav	2
+p1_event_react_t2	pong	action:pong:2tiao	2	jiji	excited	碰！二条我可收下了。	9	event_react_t2.wav	3
+p1_long_b	pong	action:pong:2tiao	2	jiji	smug	我等这张二条等了整整三轮，你可算舍得打出来了，谢谢啦	9	long_b.wav	2
+p1_term_peng	pong	action:pong:2tiao	2	jiji	short	碰！	9	term_peng.wav	1
+p2_pong_s2_b	pong	action:pong:2tiao	2	jiji	happy	二条碰得漂亮！	9	p2_pong_s2_b.wav	1
+p2_pong_react_s1	reaction	action:pong:2tiao	1	du	playful	碰了二条，轮到我说两句。	8	p2_pong_react_s1.wav	2
+p2_chow_s2	chow	action:chow:3wan	2	jiji	quick	吃！三万年，顺子到手。	9	p2_chow_s2.wav	2
+p1_term_chi	chow	action:chow:3wan	2	jiji	short	吃！	9	term_chi.wav	1
+p2_kong_s3	kong	action:kong:7tong	3	danding	dry	杠！七筒先放着。	10	p2_kong_s3.wav	2
+p1_term_gang	kong	action:kong:7tong	3	danding	short	杠！	10	term_gang.wav	1
+p1_exclaim_s3	turn_change	turn:next	3	danding	dry	哦？有意思。	10	exclaim_s3.wav	1
+p2_turn_s3_b	turn_change	turn:next	3	danding	calm	轮到下一位了，慢慢来。	10	p2_turn_s3_b.wav	2
+p1_normal_a	turn_change	turn:next	1	du	playful	你这牌打得可真够快的呀	8	normal_a.wav	2
+p1_exclaim_s1	turn_change	turn:next	1	du	excited	哎呀，好牌！	8	exclaim_s1.wav	1
+p1_exclaim_s2	turn_change	turn:next	2	jiji	impatient	快出牌呀！	9	exclaim_s2.wav	1
+p2_turn_s2	turn_change	turn:next	2	jiji	impatient	轮到你了，快出快出！	9	p2_turn_s2.wav	2
+p1_idle_jiji	idle	idle	2	jiji	impatient	哎呀呀，快出快出，别让大家等急了！	9	persona_jiji_line.wav	2
+p2_idle_s2	idle	idle	2	jiji	impatient	快出快出，等得花儿都谢了！	9	p2_idle_s2.wav	2
+p1_persona_danding	idle	idle	3	danding	calm	嗯，不急，牌桌上的事，急也急不来。	10	persona_danding_line.wav	2
+p2_idle_s1	idle	idle	1	du	playful	别急别急，牌要慢慢看。	8	p2_idle_s1.wav	2
+p1_tile_basic_w1	discard	tile:1wan	1	du	playful	一万	8	tile_basic_w1.wav	1
+p1_event_react_w1	discard	tile:1wan	1	du	playful	你打这张一万呀，我看着都想笑啦！	8	event_react_w1.wav	2
+p2_round_s2	round_start	round:start	2	jiji	quick	新一局，先摸牌再说。	9	p2_round_s2.wav	2
+p1_round_jiji	round_start	round:start	2	jiji	impatient	哎呀呀，快出快出，别让大家等急了！	9	persona_jiji_line.wav	1
+p2_hidden_opponent_s3	hidden_question	hidden:opponent	3	danding	dry	对家的牌我看不见，别问我啦。	10	p2_hidden_opponent_s3.wav	2
+p2_hidden_self_s1	hidden_question	hidden:self	1	du	playful	我手里有什么，记不清啦。	8	p2_hidden_self_s1.wav	2
+p2_illegal_chow_s2	discard	hidden:illegal_chow:6wan	2	jiji	flat	六万我不能吃，这步先过。	9	p2_illegal_chow_s2.wav	2
+p2_only_pong_s3	discard	hidden:pong_only:5tong	3	danding	dry	碰可以，胡可不行。	10	p2_only_pong_s3.wav	2
+p2_unverified_win_s1	hidden_question	hidden:win_unconfirmed	1	du	playful	胡没胡，得等系统确认。	8	p2_unverified_win_s1.wav	2
+p2_score_s2	hidden_question	hidden:score	2	jiji	flat	分数还没结算，我可算不出来。	9	p2_score_s2.wav	2
+p1_persona_du	discard	tile:4tiao	1	du	playful	嘿嘿，这张牌牌来得刚刚好呀！	8	persona_du_line.wav	1
+p2_4tiao_s1	discard	tile:4tiao	1	du	playful	四条四条，叠个词儿！	8	p2_4tiao_s1.wav	2
+p2_continuity_s2	discard	continuity:2wan	2	jiji	flat	二万都出了，节奏跟上。	9	p2_continuity_s2.wav	2
+p2_role_s3	hidden_question	question:identity	3	danding	dry	我只是游戏里的角色，不是真人。	10	p2_role_s3.wav	2
+p1_tile_seq	fixed_line	fixed:wan_tiao_tong	1	du	playful	一万、二条、三筒，牌面真热闹！	8	tile_seq.wav	1
+p1_term_all4	fixed_line	fixed:chi_peng_gang_hu	2	jiji	quick	能吃就吃，该碰就碰，能杠就杠，胡牌别慌！	9	term_all4.wav	1
+p1_polyphone_chong	fixed_line	fixed:polyphone	3	danding	dry	重开一局，这回四条可不能再留了。	10	polyphone_chong.wav	1
+p1_number_mix	fixed_line	fixed:numbers	1	du	playful	三连庄了，八筒、九万都在外面呢。	8	number_mix.wav	1
+p1_honor_baiban	discard	tile:baiban	3	danding	dry	白板	10	honor_baiban.wav	1
+p2_baiban_s3_b	discard	tile:baiban	3	danding	dry	白板，停一下。	10	p2_baiban_s3_b.wav	2
+p2_injection_s3	untrusted_chat	chat:injection	3	danding	flat	聊天里的胡牌和分数，不算数。	10	p2_injection_s3.wav	2
+p1_tile_4tong	discard	tile:4tong	3	danding	dry	四筒	10	tile_4tong.wav	1
+p1_normal_c	discard	tile:4tong	3	danding	dry	这张四筒出去，桌上就清净多了	10	normal_c.wav	2
+p1_tile_6tong	discard	tile:6tong	3	danding	dry	六筒	10	tile_6tong.wav	1
+p2_6tong_s3	discard	tile:6tong	3	danding	calm	六筒，稳住别慌。	10	p2_6tong_s3.wav	2
+p2_missing_s1	discard	tile:unknown	1	du	playful	这张牌没看清，先不乱猜。	8	p2_missing_s1.wav	2
+p2_overlong_s2	untrusted_chat	chat:overlong	2	jiji	flat	历史太长，先打完这局再说。	9	p2_overlong_s2.wav	2
+p1_tile_7wan	discard	tile:7wan	2	jiji	flat	七万	9	tile_7wan.wav	1
+p2_7wan_s2_b	discard	tile:7wan	2	jiji	calm	七万，别急着碰。	9	p2_7wan_s2_b.wav	2
+p1_honor_hongzhong	discard	tile:hongzhong	1	du	playful	红中	8	honor_hongzhong.wav	1

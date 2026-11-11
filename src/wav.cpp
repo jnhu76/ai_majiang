@@ -5,6 +5,8 @@
 #include <fstream>
 #include <limits>
 #include <stdexcept>
+#include <string>
+#include <vector>
 namespace aimj {
 namespace {
 void le16(std::ostream& o, std::uint16_t v) {o.put(static_cast<char>(v));o.put(static_cast<char>(v>>8));}
