@@ -267,10 +267,13 @@ static int run() {
             last = selected.entry->line_id;
         }
         CHECK(repeats == 0); // three candidates and a two-line recent window
-        const auto valid = voice_director.select(nine, "llm", [](const auto&, const auto&) { return "2"; });
+        // A fresh director: the six fixed picks above filled the four-line
+        // recent window, so this pick would otherwise be overridden.
+        aimj::voice::Director llm_director(*bank);
+        const auto valid = llm_director.select(nine, "llm", [](const auto&, const auto&) { return "2"; });
         CHECK(valid.llm_valid && valid.entry);
         CHECK(valid.entry->line_id == "a2"); // candidates are sorted by id
-        const auto invalid = voice_director.select(nine, "llm", [](const auto&, const auto&) { return "9"; });
+        const auto invalid = llm_director.select(nine, "llm", [](const auto&, const auto&) { return "9"; });
         CHECK(!invalid.llm_valid && invalid.entry && invalid.method == "llm_fallback");
         std::filesystem::remove(bank_path);
         // A bank that binds sid 9 to speaker 1 must fail to load.

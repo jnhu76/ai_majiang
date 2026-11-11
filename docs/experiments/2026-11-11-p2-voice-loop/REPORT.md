@@ -1,7 +1,7 @@
 # P2 最小语音闭环 — 技术可行性验收（v1）
 
 - 日期：2026-11-11
-- 分支：`experiment/p2-voice-loop`（基于 `origin/dev` `adfd264`）
+- 分支：`experiment/p2-voice-loop`（rebase 到 `origin/dev` `a56e6f4`，P1 #6 已合入）
 - 范围：只验证“公开事件 → 确定性选词 → 预制语音 → Windows 播放”的闭环，不实现真实麻将规则、不做产品 UI、不重跑 P1 全量实验。
 - 一句话结论：**Runtime GO；Constrained Dialogue GO（headless 原型）；Full Game NOT EVALUATED。** 语音听感仍待人工，LLM 在线选词无可见收益，予以关闭。
 
@@ -170,6 +170,21 @@ build-p2-real\Release\aimj_p2_voice_loop.exe --strategy fixed --play --run-id pl
 - **A3**：P1 C 的 7 条命中里 2 条语义张冠李戴，`attack_stale` 为 speaker2 播 sid10 音频；因此 **C 的音频不能作为声线对比证据**。P2 用精确键 + speaker/sid 强绑定重建银行，`attack_stale` 对应行现为 speaker3/danding/sid10。
 - **A4**：P1 报告已明确：provider 报错会丢失部分文本、`raw_llm_text` 只在已生成时保留、OpenCL preflight 不等于 kernel 归因、`ttfc_p95` 已补算（cpu4 296.453 / cpu8 249.703 / opencl 264.368 ms）、s4=0.0 是“无成功样本”而非 0 延迟、64/271 为外部/不可核验、120/37 人工项仍 pending。
 
+### 3.7 Rebase 后回归（`a56e6f4`）
+
+P1 #6 合入 `dev` 后，P2 rebase 到 `a56e6f4`。冲突集中在 `CMakeLists.txt`、`sha256.hpp`、
+`wav.hpp`、`test_main.cpp`：保留 P1 的 `WavWriteStats` 和单份 `read_pcm16_wav`，合并双方
+测试块。无模型构建 + ctest 1/1 通过。
+
+| 检查 | 结果 |
+|---|---|
+| 44 事件 fixed | 43 交付、1 条 `no_candidate` 静音（`not_applicable/skipped`）、0 校验拒绝、0 事实违规、0 声线错配、最大连说 1 |
+| event→PCM | p50 0.976 ms、p95 1.382 ms（本次机器状态；与前次 0.52/0.74 的差异按环境噪声处理，不是代码路径变化） |
+| 2 事件播放 smoke | 2/2 `audio_status=ok`、`played=2`、`waveOut` 回调到达；`first_audible_ms=null` |
+| 测试修复 | recent 窗口实际为 4；原测试在 6 次 fixed 后仍期望 LLM 命中 `a2`，必然触发 `llm_recent_override`。改用新 `Director` 隔离 recent 状态，并把过期“last two lines”注释改为 4 |
+
+结果为本地 `benchmarks/results/p2/runs/rebase-{fixed,play}/`；不改变 §3.2 的原始 A/B/C 记录。
+
 ---
 
 ## 4. 限制与未验证
@@ -181,7 +196,7 @@ build-p2-real\Release\aimj_p2_voice_loop.exe --strategy fixed --play --run-id pl
 5. **LLM 延迟不是 cpu8 标注测量**：P2 CLI 未暴露线程参数，使用 `config.json` 默认值；因此只用于“LLM 是否值得在线”的方向性判断，不作为 cpu8 性能结论。
 6. **候选集不均衡**：17/43 事件只有 1 个候选，LLM 选择空间天然受限；“LLM 无增益”在这一银行结构下成立，不能外推到更大候选集。
 7. **2 条台词复用同一 WAV**：银行 54 条 / 52 文件；不影响事实与声线校验，但统计“唯一音频”时应按 52 计。
-8. **P1 修复尚未推送**：P1 的 13 个评审修复文件已在主工作区 staged，但当前 ZCode 进程的 Mimosa gate 环境为空，`git commit` 被 hook 拒绝；PR #6 仍停在 `0effeec`。在修复推送前不满足“报告与代码一致”的合并条件，PR 保持 OPEN。
+8. **Rebase 状态**：P1 #6 已合入 `dev`（`a56e6f4`），P2 已 rebase 到该提交；P1 的 SID 复现修复（`91643a8`）随之进入 `dev`。Rebase 后复跑 44 事件与 2 事件播放 smoke，结果见 §3.7。
 
 ---
 

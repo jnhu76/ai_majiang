@@ -197,8 +197,8 @@ const BankEntry* Director::deterministic(const PublicEvent& event,
     const auto start = rotation % candidates.size();
     ++rotation;
     const BankEntry* chosen = candidates[start];
-    // Prefer a line that was not just used; the last two lines are enough to
-    // stop an audible two-line loop without starving small banks.
+    // Prefer a line that was not just used; the four-line recent window is
+    // enough to stop an audible short loop without starving small banks.
     for (std::size_t i = 0; i < candidates.size(); ++i) {
         const auto* candidate = candidates[(start + i) % candidates.size()];
         if (!recently_used(candidate->line_id)) { chosen = candidate; break; }
