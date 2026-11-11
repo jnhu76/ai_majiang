@@ -7,6 +7,12 @@
     {"$ref": "#/$defs/proposalMetadata"}
   ],
   "$defs": {
+    "proposalId": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^\\d{4}-\\d{2}-\\d{2}-[a-z_]+-\\d+(?![\\s\\S])"
+  },
     "dialogueAct": {
       "enum": ["urge_player", "tease", "console", "praise", "brag", "grumble", "callout", "congratulate", "vow", "deflect", "question"]
     },
@@ -242,12 +248,7 @@
       "type": "object",
       "properties": {
         "schema_version": {"const": 1},
-        "proposal_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256,
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}-[a-z_]+-\\d+(?![\\s\\S])"
-        },
+        "proposal_id": {"$ref": "#/$defs/proposalId"},
         "teacher_role": {
           "enum": ["scene_explorer", "character_behavior_designer", "dialogue_writer", "coverage_critic", "quality_reviewer"]
         },
@@ -315,18 +316,8 @@
         },
         "licensing_notes": {"type": "string", "minLength": 1, "maxLength": 1024},
         "content_hash": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-f0-9]{64}(?![\\s\\S])"},
-        "supersedes": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256,
-          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
-        },
-        "superseded_by": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256,
-          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
-        },
+        "supersedes": {"$ref": "#/$defs/proposalId"},
+        "superseded_by": {"$ref": "#/$defs/proposalId"},
         "human_reviewer": {
           "type": "string",
           "minLength": 1,

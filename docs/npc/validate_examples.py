@@ -185,10 +185,12 @@ def validate_examples(schema, catalog, packs, proposal):
             "proposal: unknown recent line ID")
     require(proposal["teacher_role"] == proposal["proposal_id"][11:].rsplit("-", 1)[0],
             "proposal: role differs from proposal_id")
+    for field in ("supersedes", "superseded_by"):
+        require(proposal.get(field) != proposal["proposal_id"], f"proposal: self-reference in {field}")
 
 
 def self_test(schema, examples):
-    catalog, (jiang, wen), _ = examples
+    catalog, (jiang, wen), proposal = examples
     first_line = jiang["lines"][0]
     dynamic = jiang["lines"][3]
     target = wen["scenarios"][2]["reactions"][1]["match"]
@@ -202,8 +204,9 @@ def self_test(schema, examples):
     ]}
     first_line["voice"]["audio"] = clip
     dynamic["voice"]["audio"] = finite
+    proposal["supersedes"] = "2026-11-11-dialogue_writer-0041"
     validate_examples(schema, *examples)
-    print("PASS 2 additional audio shapes (static clip and finite variant metadata)")
+    print("PASS 2 additional audio shapes and a proposal revision reference")
 
     cases = [
         ("required", first_line, "text", None, None),
@@ -232,6 +235,8 @@ def self_test(schema, examples):
         ("unreachable followup", followup["trigger"], "requires_act", "question", "no eligible root"),
         ("reversed trait band", claim_reaction["match"]["trait_bands"], "competitiveness", [1, 0], "inverted trait band"),
         ("shadowed match", claim_reaction, "match", {}, "catch-all"),
+        ("invalid proposal revision ID", proposal, "supersedes", "wrong-id", None),
+        ("self-referential proposal revision", proposal, "supersedes", proposal["proposal_id"], "self-reference"),
     ]
     for label, obj, key, replacement, diagnostic in cases:
         original = obj.pop(key, None)
