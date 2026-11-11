@@ -1,0 +1,54 @@
+{
+  "record_date": "2026-11-11",
+  "experiment": "P1 dialogue-real (real MNN LLM + real sherpa-onnx TTS, three configs: CPU 4T / CPU 8T / AMD OpenCL)",
+  "machine_class": "single dedicated experiment workstation; WSL/Linux/Android/iOS substitutes are not allowed for this experiment",
+  "cpu": {
+    "model": "AMD Ryzen 7 5800H with Radeon Graphics",
+    "physical_cores": 8,
+    "logical_processors": 16,
+    "reported_max_clock_mhz": 3201
+  },
+  "gpu": {
+    "primary": {
+      "model": "AMD Radeon(TM) Graphics",
+      "type": "integrated GPU in Ryzen 7 5800H (UMA shared memory)",
+      "driver_version": "31.0.21923.11000",
+      "driver_date": "2025-07-01",
+      "adapter_ram_reported_bytes": 3221225472,
+      "note": "AdapterRAM is the UMA shared-memory figure reported by WMI; no discrete GPU is installed"
+    },
+    "virtual_adapters": [
+      {
+        "model": "MuMu Virtual Display Adapter",
+        "driver_version": "20.36.41.498",
+        "driver_date": "2026-03-12",
+        "note": "virtual display adapter of a mobile emulator installed on this machine; enumerated by WMI but not a compute target"
+      }
+    ]
+  },
+  "memory": {
+    "total_physical_bytes": 31057453056,
+    "total_physical_gib": 28.92,
+    "nominal_gb": 32
+  },
+  "os": {
+    "caption_reported": "Microsoft Windows 11 专业版 (Windows 11 Pro)",
+    "architecture": "64-bit",
+    "version": "10.0.26200",
+    "build": "26200",
+    "update_build_revision": 9711,
+    "build_full": "26200.9711",
+    "display_version": "25H2"
+  },
+  "collection": {
+    "shell": "Git Bash (Windows PowerShell available)",
+    "commands": [
+      "powershell -NoProfile -Command \"Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed\" -> AMD Ryzen 7 5800H with Radeon Graphics, 8 cores, 16 logical, 3201 MHz",
+      "powershell -NoProfile -Command \"Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory\" -> 31057453056",
+      "powershell -NoProfile -Command \"Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber,OSArchitecture\" -> Microsoft Windows 11 专业版, 10.0.26200, 26200, 64 位",
+      "powershell -NoProfile -Command \"(Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion').DisplayVersion; (...).UBR\" -> 25H2, 9711",
+      "powershell -NoProfile -Command \"Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,DriverDate,AdapterRAM\" -> AMD Radeon(TM) Graphics 31.0.21923.11000; MuMu Virtual Display Adapter 20.36.41.498"
+    ],
+    "sanitization": "host name, user name and absolute local paths deliberately excluded from this record (earlier P0 record at benchmarks/results/p0-hardware.json contains a machine name and was not reused)"
+  }
+}

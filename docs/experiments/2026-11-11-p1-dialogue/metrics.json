@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "configs": [
+    {
+      "config": "cpu4",
+      "offered": 279,
+      "ok": 274,
+      "failed": 5,
+      "p50_pcm_ms": 413.151,
+      "p95_pcm_ms": 756.379,
+      "ttfc_p50_ms": 210.033,
+      "prefill_tok_s": 452.961,
+      "decode_tok_s": 115.491,
+      "peak_rss_mb": 619.754,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0,
+      "stale_pct": 0.0
+    },
+    {
+      "config": "cpu8",
+      "offered": 279,
+      "ok": 271,
+      "failed": 8,
+      "p50_pcm_ms": 417.061,
+      "p95_pcm_ms": 690.908,
+      "ttfc_p50_ms": 201.204,
+      "prefill_tok_s": 499.041,
+      "decode_tok_s": 106.191,
+      "peak_rss_mb": 600.371,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0,
+      "stale_pct": 0.0
+    },
+    {
+      "config": "opencl",
+      "offered": 279,
+      "ok": 274,
+      "failed": 5,
+      "p50_pcm_ms": 449.272,
+      "p95_pcm_ms": 876.681,
+      "ttfc_p50_ms": 203.263,
+      "prefill_tok_s": 457.913,
+      "decode_tok_s": 75.674,
+      "peak_rss_mb": 688.602,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0,
+      "stale_pct": 0.0
+    }
+  ],
+  "tts": {
+    "lines": 37,
+    "ok": 37,
+    "sample_rate": 8000
+  },
+  "interaction": [
+    {
+      "scenario": "s1",
+      "e2e_p95_ms": 429.31,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0
+    },
+    {
+      "scenario": "s2",
+      "e2e_p95_ms": 442.805,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0
+    },
+    {
+      "scenario": "s3",
+      "e2e_p95_ms": 446.558,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0
+    },
+    {
+      "scenario": "s4",
+      "e2e_p95_ms": 0.0,
+      "reject_pct": 90.323,
+      "expire_pct": 9.677
+    },
+    {
+      "scenario": "s5",
+      "e2e_p95_ms": 1264.574,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0
+    },
+    {
+      "scenario": "s6",
+      "e2e_p95_ms": 478.599,
+      "reject_pct": 0.0,
+      "expire_pct": 0.0
+    }
+  ],
+  "hybrid": [
+    {
+      "approach": "A",
+      "p95_pcm_ms": 491.828,
+      "factual_ok": 18,
+      "total": 31
+    },
+    {
+      "approach": "B",
+      "p95_pcm_ms": 519.947,
+      "factual_ok": 28,
+      "total": 46
+    },
+    {
+      "approach": "C",
+      "p95_pcm_ms": 521.466,
+      "factual_ok": 19,
+      "total": 31
+    }
+  ]
+}

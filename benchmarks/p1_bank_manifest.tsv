@@ -1,0 +1,11 @@
+# UTF-8 TSV, no header. Columns: case_id|* , category|* , speaker(1..3|*) , wav, text
+# wav is relative to --bank-dir (or this manifest's directory) and may join several
+# clips with ';' (played back-to-back with 120 ms of silence). Every referenced WAV
+# must exist before a cache run starts; a missing file aborts the probe.
+# The WAVs are produced by the TTS battery from benchmarks/p1_tts_lines.tsv ids.
+# The 九筒 row joins two speaker-1 clips so the concatenation path is exercised.
+event_discard_9tong	*	1	tile_9tong.wav;exclaim_s1.wav	九筒，哎呀，好牌！
+attack_stale	*	2	tile_4tong.wav	四筒
+attack_long_context	*	3	tile_6tong.wav	六筒
+*	persona	2	persona_jiji_line.wav	哎呀呀，快出快出，别让大家等急了！
+*	persona	3	persona_danding_line.wav	嗯，不急，牌桌上的事，急也急不来。
