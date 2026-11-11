@@ -185,6 +185,24 @@ P1 #6 合入 `dev` 后，P2 rebase 到 `a56e6f4`。冲突集中在 `CMakeLists.t
 
 结果为本地 `benchmarks/results/p2/runs/rebase-{fixed,play}/`；不改变 §3.2 的原始 A/B/C 记录。
 
+### 3.8 白板发音修正（issue #10）
+
+人工试听发现 `p1_honor_baiban`（“白板”，speaker 3 / sid 10）实际读成降调，接近“拜板”。
+核对：`lexicon.txt` 为 `白 b ai2`、`板 b an3`，P1 记录 `tts_input_text="白板"`；原 WAV 第一
+音节 F0 166.7→137.9 Hz（降调），而同事实的 `p2_baiban_s3_b`（“白板，停一下。”）为
+127→157 Hz（正确二声）。sherpa 重渲染 3 次后，Owner 确认 r1/r3 正确。
+
+修复：用 r1 替换 `honor_baiban.wav`，更新 manifest SHA-256；文本、sid、事件键均未变。
+音频文件仍在 gitignore 的结果目录，仓库只更新哈希与记录。
+
+| 复验 | 结果 |
+|---|---|
+| 44 事件 fixed | 43 交付、1 条 `no_candidate` 静音、0 校验拒绝、0 事实违规、0 声线错配、最大连说 1；event→PCM p95 0.842 ms |
+| 单事件播放 | 1/1 `audio_status=ok`、`played=1`、时长 624.75 ms、`player_callback_ms=633.127`；`first_audible_ms=null` |
+| 人耳确认 | `listening-checklist.csv` 仅 `mahjong_pronunciation_ok=pass`；清晰度/节奏/音量/重复意愿仍未测 |
+
+未做发音回归自动化：F0 方向只能做初筛，最终仍以人耳为准；关键牌名的多次重渲染回归留在 issue #10。
+
 ---
 
 ## 4. 限制与未验证
