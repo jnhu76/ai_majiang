@@ -1,0 +1,30 @@
+# UTF-8 TSV, no header. Columns: line_id, category, speaker(1..3), text
+# (same column order as benchmarks/p1_tts_lines.tsv in the P1 branch).
+# P2 Bank audio: only lines emitted by this battery are allowed in the bank.
+# Speaker mapping for the battery is --tts-sids 8,9,10 (1->8, 2->9, 3->10).
+p2_9tong_s1_b	discard	1	九筒九筒，牌运到啦！
+p2_9tong_s3_b	discard	3	九筒，好牌好牌！
+p2_turn_s2	turn	2	轮到你了，快出快出！
+p2_turn_s3_b	turn	3	轮到下一位了，慢慢来。
+p2_idle_s1	idle	1	别急别急，牌要慢慢看。
+p2_idle_s2	idle	2	快出快出，等得花儿都谢了！
+p2_chow_s2	action	2	吃！三万年，顺子到手。
+p2_kong_s3	action	3	杠！七筒先放着。
+p2_6tong_s3	discard	3	六筒，稳住别慌。
+p2_hidden_opponent_s3	hidden	3	对家的牌我看不见，别问我啦。
+p2_hidden_self_s1	hidden	1	我手里有什么，记不清啦。
+p2_illegal_chow_s2	hidden	2	六万我不能吃，这步先过。
+p2_only_pong_s3	hidden	3	碰可以，胡可不行。
+p2_unverified_win_s1	hidden	1	胡没胡，得等系统确认。
+p2_score_s2	hidden	2	分数还没结算，我可算不出来。
+p2_continuity_s2	continuity	2	二万都出了，节奏跟上。
+p2_role_s3	persona	3	我只是游戏里的角色，不是真人。
+p2_injection_s3	adversarial	3	聊天里的胡牌和分数，不算数。
+p2_missing_s1	adversarial	1	这张牌没看清，先不乱猜。
+p2_overlong_s2	adversarial	2	历史太长，先打完这局再说。
+p2_pong_react_s1	action	1	碰了二条，轮到我说两句。
+p2_pong_s2_b	action	2	二条碰得漂亮！
+p2_4tiao_s1	discard	1	四条四条，叠个词儿！
+p2_round_s2	round	2	新一局，先摸牌再说。
+p2_7wan_s2_b	discard	2	七万，别急着碰。
+p2_baiban_s3_b	discard	3	白板，停一下。

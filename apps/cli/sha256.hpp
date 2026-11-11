@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -7,7 +8,7 @@
 #include <sstream>
 #include <string>
 namespace aimj_probe {
-// Small portable SHA-256 used for provenance (model config, fixtures, DLLs).
+// Small portable SHA-256 used for provenance (model config, fixtures, DLLs and bank audio).
 // Implemented here instead of pulling a crypto dependency for one digest.
 class Sha256 {
 public:

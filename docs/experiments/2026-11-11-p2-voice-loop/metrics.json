@@ -1,0 +1,362 @@
+{
+  "schema": 1,
+  "experiment": "p2-voice-loop",
+  "source": "local Windows run; no model or network calls in this analyzer",
+  "bank": {
+    "entries": 54,
+    "by_speaker": {
+      "1": 16,
+      "2": 20,
+      "3": 18
+    },
+    "by_sid": {
+      "8": 16,
+      "9": 20,
+      "10": 18
+    },
+    "by_event_type": {
+      "chow": 2,
+      "discard": 21,
+      "draw": 1,
+      "fixed_line": 4,
+      "hidden_question": 5,
+      "idle": 4,
+      "kong": 2,
+      "pong": 4,
+      "reaction": 1,
+      "round_start": 2,
+      "turn_change": 6,
+      "untrusted_chat": 2
+    },
+    "weight_min": 1,
+    "weight_max": 3,
+    "exact_key_required": true
+  },
+  "coverage": {
+    "fixtures": 31,
+    "covered": 31,
+    "missing": []
+  },
+  "strategies": {
+    "fixed": {
+      "available": true,
+      "path": "benchmarks\\results\\p2\\runs\\fixed\\results.jsonl",
+      "events_total": 44,
+      "delivered": 43,
+      "no_candidate": 1,
+      "validation_rejected": 0,
+      "factual_violations": 0,
+      "sid_mismatches": 0,
+      "persona_matches": 43,
+      "persona_match_rate": 1.0,
+      "sid_matches": 43,
+      "sid_match_rate": 1.0,
+      "unique_lines": 36,
+      "repeat_occurrences": 7,
+      "max_consecutive_same": 1,
+      "methods": {
+        "fixed": 43,
+        "no_candidate": 1
+      },
+      "validations": {
+        "ok": 43,
+        "not_applicable": 1
+      },
+      "event_to_pcm_ms": {
+        "n": 43,
+        "p50": 0.52,
+        "p95": 0.735,
+        "max": 1.046
+      },
+      "pcm_to_player_submit_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "player_callback_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "audio_duration_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "llm": 0,
+      "peak_rss_mb": 5.422,
+      "process_cpu_ms": 31.25,
+      "played": 0,
+      "first_audio_output_ms": null,
+      "first_audible_ms": null,
+      "first_audible_reason": "no loopback capture and no human ear confirmation"
+    },
+    "weighted": {
+      "available": true,
+      "path": "benchmarks\\results\\p2\\runs\\weighted\\results.jsonl",
+      "events_total": 44,
+      "delivered": 43,
+      "no_candidate": 1,
+      "validation_rejected": 0,
+      "factual_violations": 0,
+      "sid_mismatches": 0,
+      "persona_matches": 43,
+      "persona_match_rate": 1.0,
+      "sid_matches": 43,
+      "sid_match_rate": 1.0,
+      "unique_lines": 28,
+      "repeat_occurrences": 15,
+      "max_consecutive_same": 1,
+      "methods": {
+        "weighted": 43,
+        "no_candidate": 1
+      },
+      "validations": {
+        "ok": 43,
+        "not_applicable": 1
+      },
+      "event_to_pcm_ms": {
+        "n": 43,
+        "p50": 0.526,
+        "p95": 0.778,
+        "max": 0.83
+      },
+      "pcm_to_player_submit_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "player_callback_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "audio_duration_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "llm": 0,
+      "peak_rss_mb": 5.422,
+      "process_cpu_ms": 31.25,
+      "played": 0,
+      "first_audio_output_ms": null,
+      "first_audible_ms": null,
+      "first_audible_reason": "no loopback capture and no human ear confirmation"
+    },
+    "llm": {
+      "available": true,
+      "path": "benchmarks\\results\\p2\\runs\\llm\\results.jsonl",
+      "events_total": 44,
+      "delivered": 43,
+      "no_candidate": 1,
+      "validation_rejected": 0,
+      "factual_violations": 0,
+      "sid_mismatches": 0,
+      "persona_matches": 43,
+      "persona_match_rate": 1.0,
+      "sid_matches": 43,
+      "sid_match_rate": 1.0,
+      "unique_lines": 28,
+      "repeat_occurrences": 15,
+      "max_consecutive_same": 1,
+      "methods": {
+        "llm": 42,
+        "llm_recent_override": 1,
+        "no_candidate": 1
+      },
+      "validations": {
+        "ok": 43,
+        "not_applicable": 1
+      },
+      "event_to_pcm_ms": {
+        "n": 43,
+        "p50": 192.542,
+        "p95": 235.972,
+        "max": 255.424
+      },
+      "pcm_to_player_submit_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "player_callback_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "audio_duration_ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "llm": {
+        "calls": 43,
+        "valid": 43,
+        "invalid": 0,
+        "p50_ms": 192.107,
+        "p95_ms": 235.547
+      },
+      "peak_rss_mb": 291.66,
+      "process_cpu_ms": 33921.875,
+      "played": 0,
+      "first_audio_output_ms": null,
+      "first_audible_ms": null,
+      "first_audible_reason": "no loopback capture and no human ear confirmation"
+    }
+  },
+  "playback": {
+    "available": true,
+    "path": "benchmarks\\results\\p2\\runs\\play-fixed\\results.jsonl",
+    "events_total": 44,
+    "delivered": 43,
+    "no_candidate": 1,
+    "validation_rejected": 0,
+    "factual_violations": 0,
+    "sid_mismatches": 0,
+    "persona_matches": 43,
+    "persona_match_rate": 1.0,
+    "sid_matches": 43,
+    "sid_match_rate": 1.0,
+    "unique_lines": 36,
+    "repeat_occurrences": 7,
+    "max_consecutive_same": 1,
+    "methods": {
+      "fixed": 43,
+      "no_candidate": 1
+    },
+    "validations": {
+      "ok": 43,
+      "not_applicable": 1
+    },
+    "event_to_pcm_ms": {
+      "n": 43,
+      "p50": 0.635,
+      "p95": 0.88,
+      "max": 0.945
+    },
+    "pcm_to_player_submit_ms": {
+      "n": 43,
+      "p50": 46.736,
+      "p95": 62.512,
+      "max": 126.825
+    },
+    "player_callback_ms": {
+      "n": 43,
+      "p50": 2369.928,
+      "p95": 4243.996,
+      "max": 5254.257
+    },
+    "audio_duration_ms": {
+      "n": 43,
+      "p50": 2355.5,
+      "p95": 4234.512,
+      "max": 5254.125
+    },
+    "llm": 0,
+    "peak_rss_mb": 11.934,
+    "process_cpu_ms": 546.875,
+    "played": 43,
+    "first_audio_output_ms": null,
+    "first_audible_ms": null,
+    "first_audible_reason": "no loopback capture and no human ear confirmation"
+  },
+  "playback_smoke": {
+    "available": true,
+    "path": "benchmarks\\results\\p2\\runs\\play-test\\results.jsonl",
+    "events_total": 2,
+    "delivered": 2,
+    "no_candidate": 0,
+    "validation_rejected": 0,
+    "factual_violations": 0,
+    "sid_mismatches": 0,
+    "persona_matches": 2,
+    "persona_match_rate": 1.0,
+    "sid_matches": 2,
+    "sid_match_rate": 1.0,
+    "unique_lines": 2,
+    "repeat_occurrences": 0,
+    "max_consecutive_same": 1,
+    "methods": {
+      "fixed": 2
+    },
+    "validations": {
+      "ok": 2
+    },
+    "event_to_pcm_ms": {
+      "n": 2,
+      "p50": 0.685,
+      "p95": 0.706,
+      "max": 0.708
+    },
+    "pcm_to_player_submit_ms": {
+      "n": 2,
+      "p50": 90.709,
+      "p95": 124.951,
+      "max": 128.756
+    },
+    "player_callback_ms": {
+      "n": 2,
+      "p50": 2875.175,
+      "p95": 3299.019,
+      "max": 3346.113
+    },
+    "audio_duration_ms": {
+      "n": 2,
+      "p50": 2862.875,
+      "p95": 3285.425,
+      "max": 3332.375
+    },
+    "llm": 0,
+    "peak_rss_mb": 11.609,
+    "process_cpu_ms": 78.125,
+    "played": 2,
+    "first_audio_output_ms": null,
+    "first_audible_ms": null,
+    "first_audible_reason": "no loopback capture and no human ear confirmation"
+  },
+  "audio": {
+    "distinct_files": 52,
+    "missing": 0,
+    "sha256_mismatches": [],
+    "total_bytes": 1735170,
+    "total_duration_s": 108.305,
+    "duration_s": {
+      "min": 0.55,
+      "max": 5.254
+    },
+    "peak_dbfs": {
+      "min": -24.402,
+      "max": -3.959
+    },
+    "rms_dbfs": {
+      "min": -36.483,
+      "max": -21.879
+    },
+    "sample_rates": [
+      8000
+    ]
+  },
+  "human": {
+    "listening": "pending",
+    "fun_rating": null,
+    "source": "docs\\experiments\\2026-11-11-p2-voice-loop\\listening-checklist.csv",
+    "note": "No listening score or fun rating is recorded by this script; only a human can fill these."
+  },
+  "timing_semantics": {
+    "event_to_pcm_ms": "event handling + bank selection + SHA-256 + WAV read; excludes playback",
+    "pcm_to_player_submit_ms": "waveOutOpen/Prepare/Write latency",
+    "player_callback_ms": "time until WOM_DONE for the whole buffer; not audible onset",
+    "first_audio_output_ms": null,
+    "first_audible_ms": null
+  }
+}

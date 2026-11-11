@@ -1,0 +1,4 @@
+﻿strategy,events,delivered,no_candidate,validation_rejected,factual_violations,sid_mismatches,persona_match_rate,unique_lines,repeat_occurrences,max_consecutive_same,event_to_pcm_p50_ms,event_to_pcm_p95_ms,llm_calls,llm_valid,llm_invalid,llm_p50_ms,llm_p95_ms,peak_rss_mb,process_cpu_ms,human_fun_rating
+fixed,44,43,1,0,0,0,1.0,36,7,1,0.52,0.735,0,0,0,0,0,5.422,31.25,
+weighted,44,43,1,0,0,0,1.0,28,15,1,0.526,0.778,0,0,0,0,0,5.422,31.25,
+llm,44,43,1,0,0,0,1.0,28,15,1,192.542,235.972,43,43,0,192.107,235.547,291.66,33921.875,
