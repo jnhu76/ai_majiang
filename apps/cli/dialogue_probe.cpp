@@ -432,22 +432,6 @@ std::string file_version(const std::string& path) {
        << HIWORD(info->dwFileVersionLS) << '.' << LOWORD(info->dwFileVersionLS);
     return os.str();
 }
-std::string version_from_path(const std::string& path) {
-    // SDK archives are named ...-v2.0.1-win-x64...; use that only as a labeled
-    // fallback when the DLL has no VERSIONINFO resource, never as a guess.
-    for (std::size_t i = 0; i + 1 < path.size(); ++i) {
-        if (path[i] != 'v' || !std::isdigit(static_cast<unsigned char>(path[i + 1]))) continue;
-        std::size_t end = i + 1;
-        int dots = 0;
-        while (end < path.size() &&
-               (std::isdigit(static_cast<unsigned char>(path[end])) || path[end] == '.')) {
-            if (path[end] == '.') ++dots;
-            ++end;
-        }
-        if (dots >= 2) return "v" + path.substr(i + 1, end - i - 1);
-    }
-    return {};
-}
 std::string loaded_module_file(const wchar_t* name) {
     HMODULE handle = GetModuleHandleW(name);
     if (!handle) return {};
@@ -464,6 +448,28 @@ bool file_contains(const std::string& path, const char* needle) {
     return data.find(needle) != std::string::npos;
 }
 #endif
+#if !defined(_WIN32)
+// Windows reads the DLL VERSIONINFO resource; other platforms have no
+// equivalent here, so callers fall back to the path/label.
+std::string file_version(const std::string&) { return {}; }
+#endif
+// SDK archives are named ...-v2.0.1-win-x64...; use that only as a labeled
+// fallback when the DLL has no VERSIONINFO resource, never as a guess.
+// Pure string parsing, shared by every platform.
+std::string version_from_path(const std::string& path) {
+    for (std::size_t i = 0; i + 1 < path.size(); ++i) {
+        if (path[i] != 'v' || !std::isdigit(static_cast<unsigned char>(path[i + 1]))) continue;
+        std::size_t end = i + 1;
+        int dots = 0;
+        while (end < path.size() &&
+               (std::isdigit(static_cast<unsigned char>(path[end])) || path[end] == '.')) {
+            if (path[end] == '.') ++dots;
+            ++end;
+        }
+        if (dots >= 2) return "v" + path.substr(i + 1, end - i - 1);
+    }
+    return {};
+}
 struct SidMap {
     std::array<int, 3> sid{0, 1, 2};
     int for_speaker(int speaker) const {
