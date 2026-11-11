@@ -1,0 +1,102 @@
+{
+  "record_date": "2026-11-11",
+  "experiment": "P1 dialogue-real software manifest",
+  "mnn": {
+    "commit": "24563667d4c923a6f67591a0132141a84b1e2ebb",
+    "dlls": {
+      "cpu": {
+        "path": "build-mnn/Release/MNN.dll",
+        "sha256": "a32de91e6fc9222db745bda89901fa85443428d7dce25a0a2ba60933d55928de",
+        "opencl_symbols": false
+      },
+      "opencl": {
+        "path": "build-mnn-opencl/Release/MNN.dll",
+        "sha256": "1d5a054f605cb44296d97b8d27e7f077a5ae4d48be9ead1de499f82ce6bb53cf",
+        "opencl_symbols": true
+      }
+    },
+    "note": "Paths are repository-relative build trees. 01b pins the OpenCL hash when it builds; 04 refuses a staged DLL whose hash differs."
+  },
+  "mnn_runtime": {
+    "commit": "24563667d4c923a6f67591a0132141a84b1e2ebb",
+    "commit_date": "2026-11-10 16:46:46 +0800",
+    "commit_subject": "[Doc:Feature] Document the native Hexagon HTP backend build and deploy flow",
+    "shallow_clone": true,
+    "local_modifications": "none; tracked working tree clean (git status --porcelain shows only untracked .mimosa/)",
+    "evidence": "git log -1 --format='%H %ci %s' on the MNN source checkout in the repository-external third_party asset root; matches the reference recorded in docs/experiments/2026-11-10-win-native-real/model-sha256.txt line 2"
+  },
+  "models_sha256": {
+    "reference_file": "docs/experiments/2026-11-10-win-native-real/model-sha256.txt",
+    "recompute_method": "sha256sum (Git Bash) over each listed file in the repository-external third_party asset root, then programmatic diff of recomputed list against the reference manifest",
+    "recompute_result": "16/16 entries match (diff output: 'ALL 16 HASHES MATCH MANIFEST')",
+    "llm_model": {
+      "name": "MNN-Pocket-0.3B-MNN (HuggingFace taobao-mnn/MNN-Pocket-0.3B-MNN)",
+      "source_revision": "05e05fd35206c6b1f9c662e7c8e56af21cd6b836",
+      "quantization": "INT4 (per experiment brief)",
+      "files": [
+        {"path": "third_party/models/MNN-Pocket-0.3B-MNN/llm.mnn", "sha256": "d42a7d9c7152b45b2b6805f9a5ab6dd95c485ad718be88ec723087d4f5d71d7c", "match": true},
+        {"path": "third_party/models/MNN-Pocket-0.3B-MNN/llm.mnn.weight", "sha256": "c9e0f2950718c057aeb2c20e5b8dd669cd02477c6c355b46d153256a312a248d", "match": true},
+        {"path": "third_party/models/MNN-Pocket-0.3B-MNN/tokenizer.mtok", "sha256": "9f806cad88e8be82e0ca3868903f3528eb1ffcbe4de1437e20549b94fccb4440", "match": true},
+        {"path": "third_party/models/MNN-Pocket-0.3B-MNN/config.json", "sha256": "801311d0461dceffb4fe06f71a38b8ffb9616022626109537d3343ecc747619f", "match": true},
+        {"path": "third_party/models/MNN-Pocket-0.3B-MNN/llm_config.json", "sha256": "64e1b9fc5905fc9e91a8b2007c225b70dc82ffb183ecdb4bfc28e01ac42adc45", "match": true}
+      ]
+    },
+    "tts_model": {
+      "name": "vits-icefall-zh-aishell3",
+      "distribution": "sherpa-onnx release tag tts-models asset vits-icefall-zh-aishell3.tar.bz2",
+      "licenses": "AISHELL-3 corpus Apache-2.0; icefall recipe Apache-2.0; sherpa-onnx Apache-2.0",
+      "files": [
+        {"path": "third_party/models/vits-icefall-zh-aishell3/model.onnx", "sha256": "5511d651b7840c0a93a6bbfd4afd070a2c7f39ca1ec3ff2ecd73191519bbb852", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/tokens.txt", "sha256": "50b45a7b7de1752fd3c7b4755661c285f1547f59186eca2281089a81307ad953", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/lexicon.txt", "sha256": "ab2e61d357551e7b24ddd965d924aca784c20165ff58c150794e539c6b5e9e35", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/rule.far", "sha256": "b090ed05e333fe125b62d8b1de5f1a1d4579fb237c606e7ac0b84707c863a01f", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/speakers.txt", "sha256": "50a825fc9a89172eee04a4d68869d933d0eca0d847f3b6fcffff9514cc72442d", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/date.fst", "sha256": "eb8aa079ae3cb81d8f4404992f39d61a0cb990947512b5b8d1e54d1f6980e718", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/number.fst", "sha256": "743f402181fcfebf76cc2f0546b71fa26476e626fbe4e460fb7b4c3a7a8bd5bd", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/phone.fst", "sha256": "1ac2b6fa56b1442320c4de7db08353bab8963a2b57f365eebcdd3a2d3562f8d7", "match": true},
+        {"path": "third_party/models/vits-icefall-zh-aishell3/new_heteronym.fst", "sha256": "ca14b2127e27baa571664e4bb791e143e7425f56a6bc29db08d74f97e6aa4e29", "match": true}
+      ]
+    },
+    "distribution_archives": [
+      {"path": "third_party/downloads/sherpa-onnx-v2.0.1-win-x64-shared-MD-Release.tar.bz2", "sha256": "ce987d5bfca42c74b54f7b3bbaaa8c1febe3c5cd0fea8f94be80ea30e72f1f61", "match": true},
+      {"path": "third_party/downloads/vits-icefall-zh-aishell3.tar.bz2", "sha256": "ab468db3a3308cdd861495e0db2f25d79418a0c00639f74944c7cdf5dd8c6ec1", "match": true}
+    ]
+  },
+  "sherpa_onnx": {
+    "version": "2.0.1",
+    "distribution": "sherpa-onnx-v2.0.1-win-x64-shared-MD-Release.tar.bz2 (win-x64 shared/MD release)",
+    "build_banner_from_dll": {
+      "version": "2.0.1",
+      "git": "af2d8d81",
+      "build_date": "Mon Oct 26 14:57:12 2026"
+    },
+    "evidence": [
+      "archive file name sherpa-onnx-v2.0.1-win-x64-shared-MD-Release.tar.bz2 (SHA-256 above matches the reference manifest)",
+      "grep -aoP in the extracted sherpa-onnx-c-api.dll shows embedded build banner: 'Mon Oct 26 14:57:12 2026', '2.0.1', 'af2d8d81', followed by the upstream CI build directory (GitHub Actions layout; literal path not recorded per sanitization rule)",
+      "PE VersionInfo (Get-Item ...).VersionInfo of sherpa-onnx-c-api.dll is empty - the release build carries no version resource, so the embedded banner is the authoritative in-binary version evidence"
+    ]
+  },
+  "toolchain": {
+    "visual_studio": {
+      "product": "Visual Studio 2022 Community (vswhere installationName VisualStudio/17.14.33+37314.3)",
+      "ide_version": "17.14.37314.3",
+      "msvc_toolset": "14.44.35207",
+      "cl_version": "19.44.35227 (x64)"
+    },
+    "cmake": "4.3.2",
+    "python": "3.12.10"
+  },
+  "collection": {
+    "shell": "Git Bash (Windows PowerShell available)",
+    "commands": [
+      "git -C <third_party>/MNN log -1 --format='%H %ci %s' -> 24563667d4c923a6f67591a0132141a84b1e2ebb 2026-11-10 16:46:46 +0800 [Doc:Feature] Document the native Hexagon HTP backend build and deploy flow",
+      "git -C <third_party>/MNN rev-parse --is-shallow-repository -> true; git status --porcelain -> only untracked .mimosa/",
+      "sha256sum over the 16 files listed in docs/experiments/2026-11-10-win-native-real/model-sha256.txt (5 LLM files, 9 TTS files, 2 archives); sorted diff against the reference manifest -> ALL 16 HASHES MATCH MANIFEST",
+      "vswhere.exe -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format json -> installationVersion 17.14.37314.3",
+      "ls <VS>/VC/Tools/MSVC/ -> 14.44.35207; running that toolset's bin/Hostx64/x64/cl.exe banner -> 用于 x64 的 Microsoft (R) C/C++ 优化编译器 19.44.35227 版",
+      "cmake --version -> cmake version 4.3.2",
+      "python --version -> Python 3.12.10"
+    ],
+    "sanitization": "no user names, host names or absolute local paths are recorded in this file; third_party assets are referenced by repository-relative pseudo-paths only"
+  }
+}

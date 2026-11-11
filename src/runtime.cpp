@@ -44,6 +44,9 @@ std::size_t AiRuntime::backlog() const {
     return llm_queue_.size()+tts_queue_.size();
 }
 void AiRuntime::publish(SpeechResult r) {
+    // Every published result carries the moment it became consumable; ok rows
+    // already stamped this right after TTS, so only failure paths fill it here.
+    if(r.pcm_completed_at==Clock::time_point{}) r.pcm_completed_at=Clock::now();
     {
         std::lock_guard lock(counters_mu_);
         ++counts_.completed;
@@ -76,14 +79,37 @@ void AiRuntime::run_llm() {
             r.status="stale";r.end_to_end_ms=ms(Clock::now()-req.created);publish(std::move(r));continue;
         }
         if(start>=req.deadline) {
-            r.status="timeout";r.text=req.fallback_line;
+            r.status="timeout";r.text=req.fallback_line;r.fallback_used=true;
             r.end_to_end_ms=ms(Clock::now()-req.created);publish(std::move(r));continue;
         }
-        try {r.text=llm_->generate(req.prompt,req.speaker);r.llm_usage=llm_->last_usage();}
-        catch(...) {r.status="error";r.text=req.fallback_line;}
+        bool generated=false;
+        try {
+            r.text=llm_->generate(req.prompt,req.speaker);r.llm_usage=llm_->last_usage();generated=true;
+        }
+        catch(const std::exception& e) {
+            // Ask the provider for usage once more: a backend that failed after
+            // generation started may still report the status that ended the call.
+            r.llm_usage=llm_->last_usage();
+            r.status="error";r.error_message=e.what();r.text=req.fallback_line;r.fallback_used=true;
+        }
+        catch(...) {r.llm_usage=llm_->last_usage();r.status="error";r.error_message="unknown llm exception";r.text=req.fallback_line;r.fallback_used=true;}
         auto done=Clock::now();r.llm_ms=ms(done-start);
-        if(req.session_id!=active_session_.load()) r.status="stale";
-        else if(done>=req.deadline) {r.status="timeout";r.text=req.fallback_line;}
+        // A model line that arrives after its turn is over must not be spoken,
+        // but it stays auditable in raw_llm_text rather than being discarded.
+        // Only a provider result may enter raw_llm_text: copying the fallback
+        // here would disguise an error as model output.
+        if(req.session_id!=active_session_.load()) {
+            r.status="stale";
+            if(generated) r.raw_llm_text=r.text;
+            r.text.clear();
+            r.fallback_used=false;
+        }
+        else if(done>=req.deadline) {
+            r.status="timeout";
+            if(generated) r.raw_llm_text=r.text;
+            r.text=req.fallback_line;
+            r.fallback_used=true;
+        }
         if(r.status!="ok") {
             r.end_to_end_ms=ms(done-req.created);publish(std::move(r));continue;
         }
@@ -96,7 +122,8 @@ void AiRuntime::run_llm() {
         }
         if(queued) tts_cv_.notify_one();
         else {
-            r.status="error";r.text=req.fallback_line;
+            r.status="error";r.error_message="tts queue full";
+            r.raw_llm_text=r.text;r.text=req.fallback_line;r.fallback_used=true;
             r.end_to_end_ms=ms(Clock::now()-req.created);publish(std::move(r));
         }
     }
@@ -115,15 +142,19 @@ void AiRuntime::run_tts() {
         else if(start>=job.request.deadline) job.result.status="timeout";
         if(job.result.status=="ok") {
             try {job.result.audio=tts_->synthesize(job.result.text,job.request.speaker);}
-            catch(...) {job.result.status="error";job.result.text=job.request.fallback_line;}
+            catch(const std::exception& e) {job.result.status="error";job.result.error_message=e.what();}
+            catch(...) {job.result.status="error";job.result.error_message="unknown tts exception";}
             if(job.request.session_id!=active_session_.load()) job.result.status="stale";
             else if(Clock::now()>=job.request.deadline) job.result.status="timeout";
         }
         job.result.tts_ms=ms(Clock::now()-start);
         job.result.end_to_end_ms=ms(Clock::now()-job.request.created);
+        job.result.pcm_completed_at=Clock::now();
         if(job.result.status!="ok") {
             job.result.audio.samples.clear();
-            job.result.text=job.result.status=="stale" ? "" : job.request.fallback_line;
+            if(!job.result.text.empty()) job.result.raw_llm_text=job.result.text;
+            if(job.result.status=="stale") job.result.text.clear();
+            else {job.result.text=job.request.fallback_line;job.result.fallback_used=true;}
         }
         publish(std::move(job.result));
     }

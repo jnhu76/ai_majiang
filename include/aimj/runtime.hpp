@@ -27,6 +27,12 @@ struct LlmUsage {
     // character written to the stream. MNN's text API exposes no token-level
     // timestamps, so TTFC bounds (but is not identical to) time-to-first-token.
     double ttfc_ms{};
+    // P1 audit fields, appended after the measured values so existing callers
+    // keep their layout. Providers must initialize them with designated
+    // initializers: a future field inserted mid-struct then fails to compile
+    // instead of silently shifting values.
+    bool truncated{};      // provider stopped at max_new_tokens, output is partial
+    int status_code{-1};   // raw provider status enum; -1 = not reported
 };
 class ILlmBackend {
 public:
@@ -58,7 +64,23 @@ private:
     std::chrono::milliseconds delay_;
 };
 #ifdef AIMJ_WITH_MNN
-std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens);
+// backend_type ("cpu"/"opencl"/... ) and thread_num default to the values in the
+// model config.json when empty/zero; overrides are merged via Llm::set_config
+// before load(), so the pinned model directory itself is never modified.
+// Requesting "opencl" fails with a "backend_unavailable:" error unless the
+// loaded MNN.dll really carries OpenCL symbols and an ICD is present.
+std::unique_ptr<ILlmBackend> make_mnn_backend(const std::string& config_path, int max_new_tokens,
+                                              const std::string& backend_type = {}, int thread_num = 0);
+// Evidence that an OpenCL request can be honoured, gathered from the process
+// and the loaded binaries rather than from the request flags.
+struct OpenClDiagnostics {
+    bool mnn_dll_loaded{};
+    std::string mnn_dll_path;
+    bool mnn_opencl_symbols{};
+    bool icd_available{};
+    std::string icd_detail;
+};
+OpenClDiagnostics opencl_diagnostics();
 #endif
 #ifdef AIMJ_WITH_SHERPA
 std::unique_ptr<ITtsBackend> make_sherpa_vits_backend(
@@ -77,8 +99,18 @@ struct SpeechResult {
     double llm_ms{};
     double queue_tts_ms{};
     double tts_ms{};
-    double end_to_end_ms{};
+    double end_to_end_ms{}; // created -> publish (PCM complete for status=="ok")
     LlmUsage llm_usage;
+    // P1 audit trail, appended at the end. A fallback line replaces `text` when
+    // a later stage fails, so the model's own line is preserved here instead of
+    // being lost; `error_message` says why the stage failed.
+    std::string raw_llm_text;
+    std::string error_message;
+    bool fallback_used{false};
+    // When the result became available to the consumer (set at publish). The
+    // probe subtracts this from its poll() timestamp to measure the handoff to
+    // the playback layer without inventing a new runtime metric.
+    Clock::time_point pcm_completed_at{};
 };
 struct RuntimeCounters {
     std::uint64_t accepted{};

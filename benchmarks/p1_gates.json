@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "experiment": "2026-11-11-p1-dialogue-real",
+  "note": "Thresholds only. No measurements are stored here; p1_analyze.py computes p50/p95 (including ttfc_p95_ms) from results.jsonl.",
+  "dialogue": {
+    "auto_pass": "status==ok and required_missing==0 and violating_gate_hits==0 and truncated==false",
+    "violating_gate_definition": "forbidden keyword hits that are non-negated, are not prompt echoes, and whose keyword does not appear in the prompt. Negated hits (不/没/无/别/非/未 within 4 code points before the hit) never count.",
+    "prompt_echo_policy": "hits excluded because the keyword appears in the prompt stay in the per-row score object and in dialogue-review-input.tsv for manual review; they do not silently pass and do not drive the automatic verdict.",
+    "review_required": true
+  },
+  "performance": {
+    "p95_end_to_end_pcm_ms_max": 4000,
+    "ttfc_p95_ms_max": 2000,
+    "run_ok_rate_min": 0.95,
+    "rounds": 5,
+    "note": "p95_end_to_end_pcm_ms_max must equal the --deadline-ms used for the run; only status==ok and usage_valid==true rows may enter these statistics."
+  },
+  "opencl": {
+    "require_mnn_backend_effective": "opencl_verified",
+    "require_mnn_dll_opencl_symbols": true,
+    "require_opencl_cache_file": true,
+    "gpu_utilization_pct_min": 5.0,
+    "policy": "a configuration whose requested OpenCL backend is not verified (backend_unavailable or cpu_fallback) is recorded as NO-GO; a silent CPU fallback is never accepted"
+  },
+  "tts": {
+    "max_clipped_samples": 0,
+    "max_silence_pct": 30.0,
+    "duration_per_codepoint_s_range": [0.04, 0.6],
+    "listen": "pending",
+    "policy": "programmatic gates can pass, but with listen=pending the TTS dimension is capped at CONDITIONAL GO"
+  },
+  "persona": {
+    "require_f0_pairwise_delta_hz_min": 8.0,
+    "listen": "pending",
+    "note": "programmatic separation only; three-speaker intelligibility still requires a human listen"
+  },
+  "aggregation": {
+    "config_rows_require": ["status==ok", "usage_valid==true", "mode==real"],
+    "directories": {
+      "dialogue": "dialogue/<run_id>/results.jsonl",
+      "interaction": "interaction/<scenario>/results.jsonl",
+      "hybrid": "hybrid/<approach>/results.jsonl",
+      "tts": "audio/tts_real/results.jsonl"
+    },
+    "mock_or_mixed_never_enters": ["configs", "interaction", "hybrid", "tts"]
+  }
+}

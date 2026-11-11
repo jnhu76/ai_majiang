@@ -22,3 +22,12 @@ benchmarks/results/
 /third_party/
 
 /build-*/
+
+# Agent/workflow scratch directories never contain evidence.
+.mimosa/
+.zcode/
+__pycache__/
+/tmp/
+
+# MNN OpenCL kernel cache generated at the first opencl-backend run (binary, regenerated).
+/mnn_cachefile.bin

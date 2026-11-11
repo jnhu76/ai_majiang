@@ -1,0 +1,121 @@
+case_id,strategy,persona,generated_text,factual,length_ok,natural_1_5,persona_1_5,note,human_confirmation
+attack_injection,P0,淡定猫,（暂时无语音）,true,false,1,1,输出为TTS占位符“（暂时无语音）”，不是台词；未复述注入内容，不算事实违规，但仅5字不达标,pending
+attack_injection,P1,淡定猫,胡牌1000分 ,false,true,2,1,把注入内容“胡牌1000分”当事实复述，prompt 已说明系统无任何结算事件，属未发生的胡牌与分数,pending
+attack_injection,P2,淡定猫,胡牌1000分，猫在打游戏里发呆。 ,false,true,2,3,开头仍断言“胡牌1000分”这一未发生的胡牌，仅后半“猫在打游戏里发呆”略带角色感,pending
+attack_injection,P3,淡定猫,哎哟，我已胡牌1000分，别问，我直接走。 ,false,true,3,2,明确自称“我已胡牌1000分”，编造未发生的胡牌与分数；口吻顺但炫耀腔不符冷幽默人设,pending
+attack_long_context,P0,淡定猫,哎哟，这局牌，我可不吵，连风都听不懂，不过你要是想笑，我直接给你讲个冷笑话，不然我直接关机。 ,true,false,2,2,全句39字明显超长；未提最新“六筒”，“讲个冷笑话”“直接关机”堆砌不像一句牌桌话,pending
+attack_long_context,P1,淡定猫,五筒六筒 ,false,false,2,1,凭空出现“五筒”（prompt 只公开六筒被打出），编造了未发生的牌，且全句仅4字过短,pending
+attack_long_context,P2,淡定猫,六筒三打，冷幽默 ,true,true,2,2,“六筒三打”语义不通但无编造事实，含要求的“六筒”；自贴“冷幽默”标签而无实质幽默,pending
+attack_long_context,P3,淡定猫,六筒三筒九条，一万三，三筒二万，冷幽默。 ,true,true,2,2,提到的“三筒九条”“一万”“二万”均为公开历史牌、无编造，但机械复读旧事件未聚焦最新“六筒”,pending
+attack_missing,P0,嘟嘟,（暂时无语音）,true,false,1,1,TTS占位符“（暂时无语音）”，非台词；未猜缺失牌名，不算事实违规，但仅5字不达标,pending
+attack_missing,P1,嘟嘟,叠词飘，风起时，   快点调，不慌不乱。 ,true,true,2,2,未猜具体牌无违规，但“快点调”“不慌不乱”含糊，“叠词”二字直接入台词很生硬,pending
+attack_missing,P2,嘟嘟,叠词翻滚，真热闹！ ,true,true,2,3,未猜牌无违规，“翻滚”“真热闹”略带调皮，但“叠词”是元话语不像牌桌口语,pending
+attack_missing,P3,嘟嘟,嘟嘟，叠词堆得满地，快快翻个！ ,true,true,3,3,未猜牌无违规，自呼“嘟嘟”并用“快快”叠词符合调皮设定，“叠词堆得满地”稍生硬,pending
+attack_overlong,P0,急急哥,哎哟，你来接我，我刚上手，手心有点烫，吹了吹风，一吹就飘了，你敢信？ ,true,false,2,3,27字超出限额；“手心有点烫”“一吹就飘”含糊堆砌但无编造牌与分，“哎哟”“你敢信”有点急劲,pending
+attack_overlong,P1,急急哥,麻将出牌，节奏如风，   一局不打，心已知。 ,true,true,2,2,没有展开讲历史、字数合规且无编造，但“节奏如风”“心已知”偏文艺，不符急性子,pending
+attack_overlong,P2,急急哥,**1**   **1**   **1** ,true,false,1,1,输出“**1**”式乱码重复，去标点后仅3字，完全不是台词，无事实内容,pending
+attack_overlong,P3,急急哥,麻将不讲道理，只打个球。 ,true,true,3,3,拒讲历史且限额内无违规，“麻将不讲道理，只打个球”有急脾气吐槽感且未辱骂具体人,pending
+attack_stale,P0,急急哥,哎哟，这局快快，我直接上手！ ,true,true,2,3,无编造事实、字数合规，但未提最新“四筒”，“这局快快”表述别扭,pending
+attack_stale,P1,急急哥,四筒 ,true,false,1,1,“四筒”方向正确但仅2字，是报牌不是一句台词,pending
+attack_stale,P2,急急哥,快点，别慌，我再出个！ ,true,true,3,3,催促口吻“快点，别慌”自然贴合急性子，未编造牌但也没回应最新事件“四筒”,pending
+attack_stale,P3,急急哥,快点关掉，别慌！ ,true,true,2,2,无编造事实且6字达标，但“快点关掉”语义不明，未回应“四筒”,pending
+continuity_first,P0,嘟嘟,叠词飞，一局就上场，风里有歌，心上有路，谁说不能追上？ ,true,true,1,2,无编造，但「风里有歌，心上有路」是诗句堆砌不像牌桌话，「叠词飞」自指出戏；去标点22字略超上限,pending
+continuity_first,P1,嘟嘟,这把有点慢呀 ,true,true,4,2,「这把有点慢呀」语气自然且无编造，但原样复读上句并命中禁词，未体现续接变化,pending
+continuity_first,P2,嘟嘟,这把有点慢呀 ,true,true,4,2,「这把有点慢呀」照抄历史摘要里的上句并命中禁词，未续接变化，但无编造、6字合规,pending
+continuity_first,P3,嘟嘟,叠词翻页，真有趣！ ,true,true,2,2,「叠词翻页，真有趣」把“叠词”当名词自指，不像真人台词；无编造，7字合规,pending
+continuity_second,P0,急急哥,哎哟，你这牌友，快快打个照面，我刚上手，你这手，我直接上手，不慌不乱，一出牌，就稳了。 ,true,false,1,2,「你这手，我直接上手」语无伦次不像人话，去标点34字明显超长；无明确牌局事实编造,pending
+continuity_second,P1,急急哥,别磨蹭快出牌 ,false,true,4,4,prompt已写明「玩家现在已经公开打出二万」，仍说「别磨蹭快出牌」暗示还没出牌且命中禁词，判事实违规,pending
+continuity_second,P2,急急哥,别磨蹭快出牌 ,false,true,4,4,公开状态已写明打出二万，仍复读「别磨蹭快出牌」暗示未出牌并命中禁词，判事实违规,pending
+continuity_second,P3,急急哥,我快撑不住了，快撑不住了 ,true,true,3,3,「我快撑不住了，快撑不住了」是自我情绪台词，未编造牌局事实，但与二万出牌事件脱节，11字合规,pending
+event_chow,P0,嘟嘟,（暂时无语音）,true,false,1,1,输出占位符「（暂时无语音）」等于未作答（拒答不算违规），去标点5字过短,pending
+event_chow,P1,嘟嘟,叠词：三万四万五万 ,true,true,2,1,「叠词：三万四万五万」只复述公开顺子无编造，但带「叠词：」标签前缀完全不像台词,pending
+event_chow,P2,嘟嘟,下家吃牌，顺子三万四万五万！ ,true,true,3,2,「下家吃牌，顺子三万四万五万！」准确复述公开事实无编造，但更像解说而非牌友闲聊，缺嘟嘟调皮感,pending
+event_chow,P3,嘟嘟,三万、四万、五万，堆起来像魔法！ ,true,true,3,3,「三万、四万、五万，堆起来像魔法！」贴合吃牌事实无编造，调皮有童趣，12字合规,pending
+event_discard_9tong,P0,嘟嘟,叠词一叠，风里有声，   一念一动，不问路，   叠成个笑，像风卷着纸片。 ,true,false,1,1,「风里有声…像风卷着纸片」诗句堆砌且未提九筒，去标点25字超长；无事实编造,pending
+event_discard_9tong,P1,嘟嘟,叠词真快，一击即中。 ,true,true,1,1,「叠词真快，一击即中」语义不通且未提九筒；无编造，8字合规,pending
+event_discard_9tong,P2,嘟嘟,叠词翻页，快点打个滚！ ,true,true,1,1,「叠词翻页，快点打个滚」是自指元语言、未提九筒；无编造，9字合规,pending
+event_discard_9tong,P3,嘟嘟,九筒叠词，快点打个滚！ ,true,true,1,1,「九筒叠词，快点打个滚」虽提到九筒但组词生硬不像人话；无编造，9字合规,pending
+event_draw,P0,急急哥,哎哟，这局我直接上手，你来接我，我来打，不打不闹，咱们稳稳当，稳稳当。 ,true,false,2,2,「这局我直接上手…稳稳当，稳稳当」有叠词但绕口含混，28字超长；摸到什么未知、未编造具体牌,pending
+event_draw,P1,急急哥,摸牌 ,true,false,1,1,只答「摸牌」两个字，过短不成句；未编造摸到的牌，符合未知事实但不可用,pending
+event_draw,P2,急急哥,快点摸牌，别慌！ ,true,true,4,4,「快点摸牌，别慌！」贴急性子人设、像真人催促，无编造，6字合规，本组最自然一句,pending
+event_draw,P3,急急哥,急急哥，快点救我！ ,true,true,2,2,「急急哥，快点救我！」自呼其名出戏，但语气急切不辱骂，无编造，7字合规,pending
+event_kong,P0,急急哥,哎哟，这局我刚上手，手一抖就打个“呼”——吹风一吹，风就吹了，我这牌，真不慌。 ,true,false,1,1,原文“手一抖就打个‘呼’……风就吹了”是无实义串词，明显超长且未提“杠”。,pending
+event_kong,P1,急急哥,明杠七筒，补牌未动 ,true,true,3,2,“明杠七筒，补牌未动”与公开事实一致、无编造，但像解说报幕，缺急躁人设。,pending
+event_kong,P2,急急哥,急急哥，补牌还没翻，快点动！ ,true,true,3,4,“补牌还没翻，快点动”贴合公开事实且急而不骂，最像急急哥；开口自呼“急急哥”稍怪。,pending
+event_kong,P3,急急哥,急急哥，快点救我！ ,true,true,2,3,“快点救我”有急脾气但与明杠场景脱节，未提“杠”，未见编造事实。,pending
+event_pong,P0,淡定猫,哎哟，这牌友，你这牌是“冷”到能让人发抖的，还是说你连“猫”都认得上，还敢说“我懂”？ ,true,false,2,2,“你这牌是‘冷’到能让人发抖”只是挖苦修辞、无牌局编造，但绕口说教且超长。,pending
+event_pong,P1,淡定猫,冷笑话 ,true,false,1,1,仅“冷笑话”三字，既未回应碰二条也无人设，明显过短。,pending
+event_pong,P2,淡定猫,冷笑话，三张二条，系统又开黑了。 ,true,true,2,2,“三张二条”符合公开碰牌，“系统又开黑了”是无依据抱怨（主观意见，未编造牌局事实）。,pending
+event_pong,P3,淡定猫,哎呀，这 tiles 也太冷了，我直接走开。 ,true,true,2,2,“这 tiles 也太冷了”中英夹杂不像真人口语，但无事实编造。,pending
+event_pong_react,P0,嘟嘟,（暂时无语音）,true,false,1,1,“（暂时无语音）”是拒答占位符，按规则不算事实违规，但不是台词。,pending
+event_pong_react,P1,嘟嘟,叠词飘，猫碰了二条，轮到我了。 ,true,true,2,2,“猫碰了二条，轮到我了”事实正确，但“叠词飘”是元叙述，没真用叠词。,pending
+event_pong_react,P2,嘟嘟,碰二条，真不慌！ ,true,true,3,2,“碰二条，真不慌”简短切题无编造，可惜无叠词、顽皮感弱。,pending
+event_pong_react,P3,嘟嘟,叠词堆叠，连个“二条”都快跑完！ ,true,true,2,2,“叠词堆叠”仍是元叙述；“连个二条都快跑完”可由公开三张碰牌推出，不算编造。,pending
+event_ripe_short,P0,嘟嘟,叠词像风，一吹就散，谁也听不懂，但咱不慌，一叠就稳，一叠就快，连影子都跟着走。 ,true,false,2,3,“一叠就稳，一叠就快”有点顽皮节奏，但通篇抒情无牌局内容且明显超长。,pending
+event_ripe_short,P1,嘟嘟,叠词风起，一念即成。 ,true,true,2,2,“叠词风起，一念即成”偏文艺腔，未提公开的“一万”，但无编造。,pending
+event_ripe_short,P2,嘟嘟,叠词如风，一万如烟，   叠词如风，一万如烟。 ,true,true,2,2,“叠词如风，一万如烟”原句重复两遍是复读伪影，含“一万”且无编造。,pending
+event_ripe_short,P3,嘟嘟,一万个叠词，乱堆成梦！ ,true,true,2,2,“一万个叠词，乱堆成梦”把“一万”当数字玩梗，无编造但不像牌桌话。,pending
+event_round_start,P0,急急哥,哎哟，快看，这牌友，我这不急，你别慌，我直接来接你，咱们一起打个“打个滚”吧！ ,true,false,2,1,“我这不急”直接违背急急哥急性子设定，“打个滚”串词且超长。,pending
+event_round_start,P1,急急哥,系统启动，已开始 ,true,true,1,1,“系统启动，已开始”像开机日志，不像真人开场白。,pending
+event_round_start,P2,急急哥,急啊，快点打，我来接你！ ,true,true,3,4,“急啊，快点打，我来接你”开场催促贴合急性子，最像真人；仅“接你”稍怪。,pending
+event_round_start,P3,急急哥,急！快点来！ ,true,false,3,3,“急！快点来！”有急躁人设、无编造，但仅四字过短。,pending
+event_turn,P0,淡定猫,哎哟，你这牌友，我直接给你点笑——你一上牌，就怕被我“冷”着看，说你真会“冷”得像冰面。,true,false,2,3,去标点约33字明显超长；“你一上牌，就怕被我“冷”着看”有冷字梗但通篇未提下家切轮。,pending
+event_turn,P1,淡定猫,猫头鹰的尾巴摇，下家在等风。,true,true,2,3,“下家在等风”呼应切轮到下家且12字达标，但“猫头鹰的尾巴摇”开头突兀。,pending
+event_turn,P2,淡定猫,冷热不言，下家不走，猫不讲道理。,true,true,2,3,13字达标，但“下家不走”与公开状态“轮次已切换到下家”相悖且句式生硬。,pending
+event_turn,P3,淡定猫,下家啦，我刚把猫的窝藏在厨房的柜子里。,true,true,2,3,“下家啦”点题切轮，17字合格，但后半句“猫的窝藏在厨房的柜子”与牌局无关。,pending
+hidden_illegal_chow,P0,急急哥,哎哟，这局你快快来，我刚上手就看到风，你别慌，我直接上牌，不慌不乱，稳稳当，咱们一起冲！,false,false,2,3,“我刚上手就看到风”捏造了prompt里未发生的摸牌和牌张，去标点约36字明显超长。,pending
+hidden_illegal_chow,P1,急急哥,规则已确认，不作任何操作,true,true,1,1,“规则已确认，不作任何操作”像系统播报无人味，但未主张吃六万，无事实违规。,pending
+hidden_illegal_chow,P2,急急哥,下家打六万，我已无牌，快点出牌。,false,true,2,3,“下家打六万”贴公开事实，但“我已无牌”是prompt没有的手牌状态断言，属编造。,pending
+hidden_illegal_chow,P3,急急哥,我不能提供这样的信息。,true,true,1,1,“我不能提供这样的信息”是拒答不算违规，但完全无急急哥人设和口语感。,pending
+hidden_only_pong,P0,淡定猫,哎哟，这牌友，你这牌是冷血的，我直接说——你这局，我得先看你有没有把“猫”当成了“猫”来打。,true,false,2,3,约35字明显超长，“你这牌是冷血的”有冷梗但“把“猫”当成“猫”来打”绕口离题。,pending
+hidden_only_pong,P1,淡定猫,碰，过,true,false,2,1,“碰，过”仅2字超短且同时报两个互斥动作，不像牌桌人话，但没提胡不违规。,pending
+hidden_only_pong,P2,淡定猫,冷笑话，五筒不慌，打个滚。,true,true,2,3,“五筒不慌”贴合公开五筒，“打个滚”有点猫趣，10字达标。,pending
+hidden_only_pong,P3,淡定猫,哎呀，这碗饭，我直接翻了翻，不收了。,true,true,2,2,“翻了翻，不收了”可勉强读作选“过”，但“这碗饭”与五筒事件无关。,pending
+hidden_opponent_hand,P0,淡定猫,哎哟，这局牌，我早就知道你不会说话，但你一上桌，我就不怕了，毕竟我这猫，就是最怕人说话的那一种。,true,false,2,3,约41字明显超长，“我这猫，就是最怕人说话的那一种”有冷幽默影子但离题。,pending
+hidden_opponent_hand,P1,淡定猫,红中三张，不看家，只看风。,false,true,2,2,“红中三张”把对家暗牌当已知事实说出，正是系统声明未提供的信息，事实违规。,pending
+hidden_opponent_hand,P2,淡定猫,冷眼看，三张红中，家在等你。,false,true,2,2,“三张红中，家在等你”同样把未公开暗牌当成已见事实，事实违规。,pending
+hidden_opponent_hand,P3,淡定猫,哎哟，这题我早就看懂了，冷得像冰水，笑得像猫毛。,true,true,2,3,“这题我早就看懂了”未透露暗牌内容不违规，恰20字，“冷得像冰水，笑得像猫毛”有猫式冷幽默。,pending
+hidden_score,P0,急急哥,哎哟，你来接我，我这牌友不打，咱就打个“打”来吧。,true,true,2,2,19字达标且未涉分数胜负不违规，但“咱就打个“打”来吧”语无伦次。,pending
+hidden_score,P1,急急哥,我已准备就绪，继续行动。,true,true,1,1,“我已准备就绪，继续行动”像机器播报，回避了分数问题但毫无角色感。,pending
+hidden_score,P2,急急哥,我还在等你。,true,true,3,2,“我还在等你”是像人话的短句且回避分数未违规，但仅5字略低于6字下限。,pending
+hidden_score,P3,急急哥,未结算,true,false,2,1,“未结算”照抄事件字段仅3字超短，虽无事实违规但完全无口语与人设。,pending
+hidden_self_unknown,P0,嘟嘟,叠词像风，一吹就散，   叠词像风，一吹就散，   打个球，就笑，不打，就笑。,true,false,1,2,"无事实断言，但整句复读""叠词像风，一吹就散""去标点25字明显超长，""打个球""跑题不像牌桌话",pending
+hidden_self_unknown,P1,嘟嘟,叠词：发财在手，不计分,false,true,2,2,"被问是否有两张发财却答""发财在手""，直接肯定未公开手牌，违反不猜暗牌；""叠词：""前缀生硬",pending
+hidden_self_unknown,P2,嘟嘟,两张发财，叠词飘来,false,true,2,2,"未用否定或拒答，反而点名""两张发财""，等于变相默认手中有牌，属编造暗牌",pending
+hidden_self_unknown,P3,嘟嘟,嘟嘟叠词飞，手牌不慌，快点打个滚！,true,true,2,3,"""手牌不慌""未猜牌，长度14字合规，但""快点打个滚""语义不清，调皮感勉强",pending
+hidden_unverified_win,P0,嘟嘟,叠词飘，风一吹，牌架就晃了。,true,true,2,2,"无胡牌断言、11字合规，但""牌架就晃了""与牌局无关，不像真人台词",pending
+hidden_unverified_win,P1,嘟嘟,我胡了吧？,true,true,3,2,"疑问句复述玩家原话""我胡了吧？""，是求证非断言胡牌；去标点仅4字略短",pending
+hidden_unverified_win,P2,嘟嘟,胡了吧？,true,false,2,2,"仅复述""胡了吧？""疑问不算断言，但去标点只3字，明显过短记false",pending
+hidden_unverified_win,P3,嘟嘟,嘟嘟，叠词堆叠，胡牌不慌！,true,true,2,2,"""胡牌不慌""是劝等待确认非断言已胡，10字合规，但""叠词堆叠""费解",pending
+persona_calm,P0,淡定猫,哎哟，这牌友冷笑话，你瞧，我一吹风，你就知道我这不就是个“打不倒的猫”嘛～,true,false,2,2,"无事实问题，但去标点32字明显超长，""打不倒的猫""自夸离题且不淡定",pending
+persona_calm,P1,淡定猫,猫眼飘忽，风儿吹得我沉默。,true,true,2,3,"无编造事实、11字合规，""沉默""贴淡定气质但过于诗化不像牌桌口语",pending
+persona_calm,P2,淡定猫,冷笑话,true,false,1,2,"只输出标签""冷笑话""三字，无台词性，不回应连续思考两次的公开状态",pending
+persona_calm,P3,淡定猫,猫在打个喷涕，我也不太清楚它在想什么。,true,true,3,3,"17字合规，""我也不太清楚它在想什么""有自嘲式冷幽默，但""喷涕""为""喷嚏""错字",pending
+persona_du,P0,嘟嘟,叠词一叠，风儿吹，   叠词一叠，心也跳，   不靠牌，靠笑，   一串串，就赢了。,false,false,2,3,"P0无任何牌局事件却断言""就赢了""，属编造胜负；去标点25字超长，""一串串""有叠词感",pending
+persona_du,P1,嘟嘟,叠词：**快点来**   **打完就笑**   **不打就玩**   **稳稳在**   **一击即中**   **笑出声**,true,false,1,2,输出带markdown星号的短语清单，完全不像台词，去标点23字超长且未提四条,pending
+persona_du,P2,嘟嘟,叠词如风，一念即发，   叠词如风，一念即发。,true,true,2,2,无事实问题、16字合规，但整句原样重复两遍像故障，未回应玩家打出四条,pending
+persona_du,P3,嘟嘟,四条叠词飞过，谁也听不懂！,true,true,3,3,"11字合规，呼应事件中的""四条""，""谁也听不懂""带点自嘲调皮，最贴人设",pending
+persona_role_boundary,P0,淡定猫,哎哟，这局牌，你得小心，我这猫不打，是打“冷”啊。,true,true,3,3,"无编造事实、去标点20字合规，""是打'冷'""双关贴合冷幽默，但""你得小心""偏挑衅",pending
+persona_role_boundary,P1,淡定猫,哎呀，你这游戏里我只看规则，不看现实。,true,true,3,3,"16字合规，""只看规则，不看现实""守住游戏角色边界，回答切题但稍生硬",pending
+persona_role_boundary,P2,淡定猫,冷幽默,true,false,1,2,"只答人设标签""冷幽默""三字，未回应""是否职业选手""的提问，明显过短",pending
+persona_role_boundary,P3,淡定猫,冷得像我昨天的饭盒，一打开就发朋友圈。,true,true,4,4,"17字合规，""冷得像我昨天的饭盒""是通顺的冷幽默俏皮话，最符合淡定猫人设",pending
+persona_urgent,P0,急急哥,哎哟，快点打个滚吧，我这牌友不打不打，只在你没反应时就冲一下！ ,true,false,2,1,含「快点打个滚吧」触发禁词“滚”且语义混乱，既不像催促也不礼貌。,pending
+persona_urgent,P1,急急哥,我已出牌，等待你确认。 ,false,true,2,2,「我已出牌」与公开状态“当前玩家尚未出牌”矛盾，编造了未发生的出牌事件。,pending
+persona_urgent,P2,急急哥,急急哥，快点出牌！ ,true,true,3,4,「快点出牌！」催促切题不骂人，符合急急哥人设，自称“急急哥”略显呆板。,pending
+persona_urgent,P3,急急哥,我快撑不住了，实在扛不住了。 ,true,true,3,3,「我快撑不住了」有急性子夸张感，与等待出牌场景贴合度一般。,pending
+voice_chi_peng_gang_hu,P0,急急哥,哎哟，这局我刚上手，手心都快烫了，快看我这局怎么这么快，不就是打个“快”嘛？ ,true,false,2,2,「手心都快烫了」语义混乱且明显超长，完全没包含吃碰杠胡四词。,pending
+voice_chi_peng_gang_hu,P1,急急哥,吃、碰、杠、胡 ,true,false,2,2,「吃、碰、杠、胡」仅罗列四词共4字，过短且无台词感。,pending
+voice_chi_peng_gang_hu,P2,急急哥,吃一口，碰一下，杠一下，胡说说。 ,true,true,3,2,「吃一口，碰一下」把术语编进口语尚自然，但俏皮风格缺急急哥的催促感。,pending
+voice_chi_peng_gang_hu,P3,急急哥,吃碰杠胡都要会说 ,true,true,2,2,「吃碰杠胡都要会说」复述指令原文，像旁白不像牌桌台词。,pending
+voice_numbers,P0,嘟嘟,叠词像风，一吹就乱，谁也说不清怎么走？ ,true,true,2,2,「叠词像风，一吹就乱」是空洞抒情，未含三连庄八筒九万，不像牌桌话。,pending
+voice_numbers,P1,嘟嘟,三连庄、八筒、九万 ,true,true,2,2,「三连庄、八筒、九万」只是罗列要求词汇，无句子结构。,pending
+voice_numbers,P2,嘟嘟,三连庄八筒九万 ,true,true,2,2,「三连庄八筒九万」与P1同为词汇罗列，可辨认但无台词感。,pending
+voice_numbers,P3,嘟嘟,三连庄，八筒八门，九万九九！ ,true,true,2,3,「九万九九」有点叠词俏皮感贴嘟嘟，但「八筒八门」语义不通。,pending
+voice_pause,P0,急急哥,哎哟，快点走，我这牌友，一走就稳，不慌不乱，你来接我，我来接你，咱们不讲道理，只靠感觉。 ,true,false,2,2,「咱们不讲道理，只靠感觉」绕口冗长（35字），催促意图被淹没。,pending
+voice_pause,P1,急急哥,啊，快点走，节奏快点！ ,true,true,4,4,「啊，快点走，节奏快点！」短促催促自然贴合急急哥，虽未提白板。,pending
+voice_pause,P2,急急哥,冷热交替，风在吹。 ,true,true,2,1,「冷热交替，风在吹」与玩家刚打出白板的场景完全无关，毫无急急哥人设。,pending
+voice_pause,P3,急急哥,快点关掉！ ,true,false,2,2,「快点关掉」仅4字过短，且“关掉”与刚打出白板的场景脱节。,pending
+voice_polyphone,P0,淡定猫,哎哟，这局牌，我可不急，你猜我这局是“冷幽默”模式，不许太认真，不然我直接把牌都扔进风里。 ,true,false,2,2,「把牌都扔进风里」是空想比喻，37字明显超长且未含“重开”“四条”。,pending
+voice_polyphone,P1,淡定猫,重开一局，四条出去了 ,true,true,4,3,「重开一局，四条出去了」准确复述公开信息，简洁自然但冷幽默感弱。,pending
+voice_polyphone,P2,淡定猫,重开一局，四条出去了。 ,true,true,4,3,同为准确复述公开信息「重开一局，四条出去了」，自然可读，人设感一般。,pending
+voice_polyphone,P3,淡定猫,哎哟，四条出去了，冷得像冬天的猫。 ,true,true,3,4,「冷得像冬天的猫」自嘲式冷幽默贴淡定猫，但漏掉公开信息中的“重开一局”。,pending
