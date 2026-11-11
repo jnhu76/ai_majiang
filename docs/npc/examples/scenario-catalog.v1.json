@@ -1,0 +1,89 @@
+{
+  "$comment": "Scenario Catalog v1 示例（文档用途，非安装内容）。三个示范场景 + 一个异常场景，字段语义见 docs/npc/SCENARIO-MODEL.md §2。",
+  "schema_version": 1,
+  "catalog_revision": "2026.11.0",
+  "scenarios": [
+    {
+      "scenario_id": "player.idle.long",
+      "title": "玩家长时间未出牌",
+      "category": "player_behavior.waiting",
+      "trigger": { "kind": "player_idle", "duration_band": "long" },
+      "guards": [
+        { "kind": "game_active", "expect": true },
+        { "kind": "speaker_not_current_player", "expect": true }
+      ],
+      "priority": "normal",
+      "cooldown": { "per_scenario_s": 90, "per_speaker_s": 6 },
+      "silence_policy": "allow",
+      "max_followups": 1,
+      "observer_filter": "all_npc_except_current_player",
+      "notes": "SocialCue 由表现层经可注入时钟产生，不属于权威游戏记录。"
+    },
+    {
+      "scenario_id": "player.idle.followup_tease",
+      "title": "有人催玩家后，另一角色打趣催牌者",
+      "category": "dialogue.followup",
+      "trigger": { "kind": "exchange_followup", "requires_act": "urge_player" },
+      "guards": [
+        { "kind": "game_active", "expect": true },
+        { "kind": "speaker_not_current_player", "expect": true },
+        { "kind": "speaker_not_actor", "expect": true }
+      ],
+      "priority": "low",
+      "cooldown": { "per_scenario_s": 120, "per_speaker_s": 8 },
+      "silence_policy": "prefer",
+      "max_followups": 0,
+      "observer_filter": "all_npc_except_actor",
+      "notes": "一次性回应链：回应不再触发回应，防止无限对话。"
+    },
+    {
+      "scenario_id": "game_action.meld.claimed_of_my_discard",
+      "title": "自己的舍牌刚被他人碰走",
+      "category": "game_action.claim",
+      "trigger": {
+        "kind": "domain_event",
+        "event_type": "meld_claimed",
+        "fact_filter": { "claim_kind": "pong", "claimed_from_is_npc": true }
+      },
+      "guards": [],
+      "priority": "high",
+      "cooldown": { "per_scenario_s": 20, "per_speaker_s": 6 },
+      "silence_policy": "allow",
+      "max_followups": 1,
+      "observer_filter": "all_npc",
+      "notes": "主观察者是被碰的 NPC（actor_only 反应由行为包的 reaction guards 细分）。"
+    },
+    {
+      "scenario_id": "continuity.hand_opening_after_player_win",
+      "title": "玩家上一手获胜后的新一手开场",
+      "category": "continuity.last_hand",
+      "trigger": { "kind": "hand_phase", "phase": "first_draw" },
+      "guards": [
+        {
+          "kind": "fact_query",
+          "query": "last_hand_winner",
+          "params": { "who": "player" }
+        }
+      ],
+      "priority": "normal",
+      "cooldown": { "per_scenario_s": 0, "per_speaker_s": 6 },
+      "silence_policy": "allow",
+      "max_followups": 1,
+      "observer_filter": "all_npc",
+      "notes": "依赖已确认的上一手公开摘要（CharacterMemory），未确认胜负不触发。"
+    },
+    {
+      "scenario_id": "anomaly.backend_unavailable",
+      "title": "端侧模型不可用或超时",
+      "category": "anomaly.fallback",
+      "trigger": { "kind": "domain_event", "event_type": "backend_unavailable" },
+      "guards": [],
+      "priority": "low",
+      "cooldown": { "per_scenario_s": 300, "per_speaker_s": 30 },
+      "silence_policy": "prefer",
+      "max_followups": 0,
+      "observer_filter": "all_npc",
+      "notes": "触发源是 app/推理层的公开状态事件（非麻将权威记录的一部分）；默认沉默，仅字幕级中性提示，绝不伪造模型成功。"
+    }
+  ]
+}

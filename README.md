@@ -49,6 +49,7 @@ The matrix runs 36 trials (~minutes depending on event pacing). Results are `ben
 ## Files to start with
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — ownership, dependency directions, cancellation and non-goals
+- [`docs/adr/`](docs/adr/) — accepted architecture decisions, starting with [ADR-0001: NPC offline authoring and runtime behavior separation](docs/adr/0001-npc-offline-authoring-pipeline.md) (teacher LLMs are dev-time tools; runtime ships only reviewed declarative packs; see [`docs/npc/`](docs/npc/) contracts)
 - [`docs/BENCHMARK_PLAN.md`](docs/BENCHMARK_PLAN.md) — real model/OS measurement matrix, performance limits, evidence protocol
 - [`apps/axmol/README.md`](apps/axmol/README.md) — link the exact same core into a generated Axmol native app, show clickable demo tile / three roles / PCM playback
 - [`src/mnn_backend.cpp`](src/mnn_backend.cpp), [`src/sherpa_backend.cpp`](src/sherpa_backend.cpp) — optional native providers with SDK pins to verify
