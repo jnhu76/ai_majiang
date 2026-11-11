@@ -1,0 +1,119 @@
+{
+  "$comment": "BehaviorPack v1 文档夹具。角色为虚构示例。所有台词支持字幕，动态台词可选本地 TTS。",
+  "schema_version": 1,
+  "pack_id": "org.aimj.demo.behavior.wen-amo",
+  "version": "1.0.0",
+  "catalog": {"min_revision": "2026.11.0"},
+  "character_ref": {"pack_id": "org.aimj.demo.wen-amo", "character_id": "wen-amo"},
+  "lines": [
+    {
+      "id": "wa_idle_tease_impatient_01",
+      "dialogue_act": "tease",
+      "locale": "zh-Hans",
+      "text": "让他想，急牌打不出好章法。",
+      "voice": {"voice_id": "amo-soft"},
+      "gesture": "talk",
+      "slots": [],
+      "weight": 1,
+      "tags": ["idle", "followup"]
+    },
+    {
+      "id": "wa_claim_smooth_01",
+      "dialogue_act": "praise",
+      "locale": "zh-Hans",
+      "text": "碰得干脆，这桌有点意思。",
+      "voice": {"voice_id": "amo-soft"},
+      "gesture": "react",
+      "slots": [],
+      "weight": 1,
+      "tags": ["claim"]
+    },
+    {
+      "id": "wa_opening_congratulate_01",
+      "dialogue_act": "congratulate",
+      "locale": "zh-Hans",
+      "text": "上一手赢得漂亮，这手也别客气。",
+      "voice": {"voice_id": "amo-soft"},
+      "gesture": "talk",
+      "slots": [],
+      "weight": 1,
+      "tags": ["continuity"]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "player.idle.long",
+      "reactions": [
+        {
+          "reaction_id": "wa_idle_calm_smile",
+          "match": {"trait_bands": {"composure": [0.6, 1.0]}},
+          "emotion_rule": {"emotion": "amused", "intensity_delta": 0.2},
+          "delivery": "silent",
+          "gesture_hint": "react",
+          "$comment": "沉稳角色默认不催玩家，只微微笑——把发言机会留给性急角色。"
+        }
+      ]
+    },
+    {
+      "scenario_id": "player.idle.followup_tease",
+      "reactions": [
+        {
+          "reaction_id": "wa_followup_tease_impatient",
+          "match": {
+            "trait_bands": {"composure": [0.6, 1.0]},
+            "guards": [
+              {
+                "kind": "fact_query",
+                "query": "relationship_affinity_max",
+                "params": {"toward": "actor", "affinity_max": 40}
+              }
+            ]
+          },
+          "emotion_rule": {"emotion": "amused", "intensity_delta": 0.15},
+          "relationship_rule": {"toward": "actor", "familiarity_delta": 1},
+          "delivery": "speak",
+          "dialogue_act": "tease",
+          "gesture_hint": "talk",
+          "lines": ["wa_idle_tease_impatient_01"],
+          "$comment": "对催牌者 affinity ≤ 40 时可接话。"
+        }
+      ]
+    },
+    {
+      "scenario_id": "game_action.meld.claimed_of_my_discard",
+      "reactions": [
+        {
+          "reaction_id": "wa_claim_observer_praise",
+          "match": {"observer_scope": "others", "trait_bands": {"composure": [0.6, 1.0]}},
+          "emotion_rule": {"emotion": "pleased", "intensity_delta": 0.15},
+          "delivery": "speak",
+          "dialogue_act": "praise",
+          "gesture_hint": "react",
+          "lines": ["wa_claim_smooth_01"]
+        },
+        {
+          "reaction_id": "wa_claim_target_silent",
+          "match": {"observer_scope": "event_target"},
+          "emotion_rule": {"emotion": "neutral", "intensity_delta": 0.0},
+          "delivery": "silent",
+          "gesture_hint": "idle",
+          "$comment": "作为被碰的舍牌者，保留原情绪且不发言。"
+        }
+      ]
+    },
+    {
+      "scenario_id": "continuity.hand_opening_after_player_win",
+      "reactions": [
+        {
+          "reaction_id": "wa_opening_congratulate",
+          "match": {"trait_bands": {"composure": [0.6, 1.0]}},
+          "emotion_rule": {"emotion": "pleased", "intensity_delta": 0.15},
+          "delivery": "speak",
+          "dialogue_act": "congratulate",
+          "gesture_hint": "talk",
+          "lines": ["wa_opening_congratulate_01"]
+        }
+      ]
+    }
+  ]
+}
