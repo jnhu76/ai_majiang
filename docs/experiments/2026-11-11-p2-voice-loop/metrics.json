@@ -328,8 +328,8 @@
     "distinct_files": 52,
     "missing": 0,
     "sha256_mismatches": [],
-    "total_bytes": 1735170,
-    "total_duration_s": 108.305,
+    "total_bytes": 1736306,
+    "total_duration_s": 108.376,
     "duration_s": {
       "min": 0.55,
       "max": 5.254

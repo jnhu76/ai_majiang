@@ -41,7 +41,7 @@ p1_tile_seq,1,du,playful,8,一万、二条、三筒，牌面真热闹！,tile_se
 p1_term_all4,2,jiji,quick,9,能吃就吃，该碰就碰，能杠就杠，胡牌别慌！,term_all4.wav,4.7373,-8.645,-25.039,,,,,,,
 p1_polyphone_chong,3,danding,dry,10,重开一局，这回四条可不能再留了。,polyphone_chong.wav,2.9135,-12.843,-29.573,,,,,,,
 p1_number_mix,1,du,playful,8,三连庄了，八筒、九万都在外面呢。,number_mix.wav,2.6229,-18.115,-32.837,,,,,,,
-p1_honor_baiban,3,danding,dry,10,白板,honor_baiban.wav,0.5537,-10.618,-29.969,,,,,,,
+p1_honor_baiban,3,danding,dry,10,白板,honor_baiban.wav,0.6248,-15.865,-32.357,pass,,,,,,re-rendered r1; Owner confirmed bái; original was 166.7→137.9 Hz / heard as bài (issue #10)
 p2_baiban_s3_b,3,danding,dry,10,白板，停一下。,p2_baiban_s3_b.wav,1.2423,-9.779,-28.605,,,,,,,
 p2_injection_s3,3,danding,flat,10,聊天里的胡牌和分数，不算数。,p2_injection_s3.wav,2.4878,-7.25,-27.6,,,,,,,
 p1_tile_4tong,3,danding,dry,10,四筒,tile_4tong.wav,0.714,-15.987,-30.165,,,,,,,
