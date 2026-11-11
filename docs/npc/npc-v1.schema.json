@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Mahjong NPC v1 content contract",
+  "oneOf": [
+    {"$ref": "#/$defs/scenarioCatalog"},
+    {"$ref": "#/$defs/behaviorPack"},
+    {"$ref": "#/$defs/proposalMetadata"}
+  ],
+  "$defs": {
+    "dialogueAct": {
+      "enum": ["urge_player", "tease", "console", "praise", "brag", "grumble", "callout", "congratulate", "vow", "deflect", "question"]
+    },
+    "trigger": {
+      "oneOf": [{"type": "object", "properties": {"kind": {"const": "domain_event"}, "event_type": {"const": "meld_claimed"}, "fact_filter": {"type": "object", "properties": {"claim_kind": {"const": "pong"}, "claimed_from_is_npc": {"const": true}}, "required": ["claim_kind", "claimed_from_is_npc"], "additionalProperties": false}}, "required": ["kind", "event_type", "fact_filter"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "player_idle"}, "duration_band": {"enum": ["short", "medium", "long"]}}, "required": ["kind", "duration_band"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "hand_phase"}, "phase": {"const": "first_draw"}}, "required": ["kind", "phase"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "exchange_followup"}, "requires_act": {"$ref": "#/$defs/dialogueAct"}}, "required": ["kind", "requires_act"], "additionalProperties": false}]
+    },
+    "guard": {
+      "oneOf": [{"type": "object", "properties": {"kind": {"const": "game_active"}, "expect": {"type": "boolean"}}, "required": ["kind", "expect"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "speaker_not_current_player"}, "expect": {"type": "boolean"}}, "required": ["kind", "expect"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "speaker_not_actor"}, "expect": {"type": "boolean"}}, "required": ["kind", "expect"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "emotion_in"}, "set": {"type": "array", "items": {"enum": ["neutral", "amused", "pleased", "annoyed", "resigned", "smug"]}, "minItems": 1, "maxItems": 6, "uniqueItems": true}}, "required": ["kind", "set"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "fact_query"}, "query": {"const": "hand_claim_count_by_seat_min"}, "params": {"type": "object", "properties": {"by": {"const": "actor"}, "against": {"const": "observer"}, "min": {"type": "integer", "minimum": 1, "maximum": 65535}}, "required": ["by", "against", "min"], "additionalProperties": false}}, "required": ["kind", "query", "params"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "fact_query"}, "query": {"const": "last_hand_winner"}, "params": {"type": "object", "properties": {"who": {"const": "player"}}, "required": ["who"], "additionalProperties": false}}, "required": ["kind", "query", "params"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "fact_query"}, "query": {"const": "win_streak_min"}, "params": {"type": "object", "properties": {"who": {"const": "player"}, "min": {"type": "integer", "minimum": 1, "maximum": 65535}}, "required": ["who", "min"], "additionalProperties": false}}, "required": ["kind", "query", "params"], "additionalProperties": false}, {"type": "object", "properties": {"kind": {"const": "fact_query"}, "query": {"const": "relationship_affinity_max"}, "params": {"type": "object", "properties": {"toward": {"enum": ["actor", "event_target", "player"]}, "affinity_max": {"type": "integer", "minimum": -32768, "maximum": 32767}}, "required": ["toward", "affinity_max"], "additionalProperties": false}}, "required": ["kind", "query", "params"], "additionalProperties": false}]
+    },
+    "scene": {
+      "type": "object",
+      "properties": {
+        "scenario_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "title": {"type": "string", "minLength": 1, "maxLength": 256},
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "trigger": {"$ref": "#/$defs/trigger"},
+        "priority": {"enum": ["low", "normal", "high", "critical"]},
+        "cooldown": {
+          "type": "object",
+          "properties": {
+            "per_scenario_s": {"type": "integer", "minimum": 0, "maximum": 3600},
+            "per_speaker_s": {"type": "integer", "minimum": 0, "maximum": 3600}
+          },
+          "required": ["per_scenario_s", "per_speaker_s"],
+          "additionalProperties": false
+        },
+        "silence_policy": {"const": "allow"},
+        "max_followups": {"enum": [0, 1]},
+        "observer_filter": {"enum": ["all_npc", "all_npc_except_actor", "all_npc_except_current_player", "actor_only"]},
+        "guards": {"type": "array", "items": {"$ref": "#/$defs/guard"}, "minItems": 0, "maxItems": 16},
+        "notes": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "$comment": {"type": "string", "minLength": 1, "maxLength": 1024}
+      },
+      "required": [
+        "scenario_id",
+        "title",
+        "category",
+        "trigger",
+        "priority",
+        "cooldown",
+        "silence_policy",
+        "max_followups",
+        "observer_filter"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {"properties": {"trigger": {"properties": {"kind": {"const": "exchange_followup"}}}}},
+          "then": {"properties": {"max_followups": {"const": 0}}}
+        }
+      ]
+    },
+    "line": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "dialogue_act": {"$ref": "#/$defs/dialogueAct"},
+        "locale": {"const": "zh-Hans"},
+        "text": {"type": "string", "minLength": 1, "maxLength": 512},
+        "voice": {
+          "type": "object",
+          "properties": {
+            "voice_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+            },
+            "audio": {
+              "oneOf": [{"type": "object", "properties": {"mode": {"const": "clip"}, "clip": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"}, "audio_sha256": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-f0-9]{64}(?![\\s\\S])"}}, "required": ["mode", "clip", "audio_sha256"], "additionalProperties": false}, {"type": "object", "properties": {"mode": {"const": "variants"}, "variants": {"type": "array", "items": {"type": "object", "properties": {"bindings": {"type": "object", "properties": {"claim_count": {"type": "integer", "minimum": 1, "maximum": 65535}, "streak": {"type": "integer", "minimum": 1, "maximum": 65535}, "tile": {"type": "integer", "minimum": 0, "maximum": 33}}, "required": [], "additionalProperties": false, "minProperties": 1}, "text": {"type": "string", "minLength": 1, "maxLength": 512}, "clip": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"}, "audio_sha256": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-f0-9]{64}(?![\\s\\S])"}}, "required": ["bindings", "text", "clip", "audio_sha256"], "additionalProperties": false}, "minItems": 1, "maxItems": 64}}, "required": ["mode", "variants"], "additionalProperties": false}, {"type": "object", "properties": {"mode": {"const": "tts"}}, "required": ["mode"], "additionalProperties": false}]
+            }
+          },
+          "required": ["voice_id"],
+          "additionalProperties": false
+        },
+        "gesture": {"enum": ["idle", "talk", "draw", "discard", "claim", "win", "react"]},
+        "slots": {
+          "type": "array",
+          "items": {
+            "oneOf": [{"type": "object", "properties": {"name": {"const": "claim_count"}, "source": {"const": "public_fact"}, "formatter": {"const": "hand_claim_count_by_seat"}}, "required": ["name", "source", "formatter"], "additionalProperties": false}, {"type": "object", "properties": {"name": {"const": "streak"}, "source": {"const": "public_fact"}, "formatter": {"const": "win_streak"}}, "required": ["name", "source", "formatter"], "additionalProperties": false}, {"type": "object", "properties": {"name": {"const": "tile"}, "source": {"const": "public_fact"}, "formatter": {"const": "tile_name"}}, "required": ["name", "source", "formatter"], "additionalProperties": false}]
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "weight": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+          },
+          "minItems": 0,
+          "maxItems": 16,
+          "uniqueItems": true
+        }
+      },
+      "required": ["id", "dialogue_act", "locale", "text", "voice", "slots", "weight", "tags"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {"properties": {"slots": {"minItems": 1}}},
+          "then": {
+            "properties": {
+              "voice": {"properties": {"audio": {"properties": {"mode": {"not": {"const": "clip"}}}}}}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"slots": {"maxItems": 0}}},
+          "then": {
+            "properties": {
+              "voice": {"properties": {"audio": {"properties": {"mode": {"not": {"const": "variants"}}}}}}
+            }
+          }
+        }
+      ]
+    },
+    "scenarioCatalog": {
+      "type": "object",
+      "properties": {
+        "schema_version": {"const": 1},
+        "catalog_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(?![\\s\\S])"
+        },
+        "scenarios": {"type": "array", "items": {"$ref": "#/$defs/scene"}, "minItems": 1, "maxItems": 1024},
+        "$comment": {"type": "string", "minLength": 1, "maxLength": 1024}
+      },
+      "required": ["schema_version", "catalog_revision", "scenarios"],
+      "additionalProperties": false
+    },
+    "behaviorPack": {
+      "type": "object",
+      "properties": {
+        "schema_version": {"const": 1},
+        "pack_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(?![\\s\\S])"
+        },
+        "catalog": {
+          "type": "object",
+          "properties": {
+            "min_revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(?![\\s\\S])"
+            }
+          },
+          "required": ["min_revision"],
+          "additionalProperties": false
+        },
+        "character_ref": {
+          "type": "object",
+          "properties": {
+            "pack_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+            },
+            "character_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+            }
+          },
+          "required": ["pack_id", "character_id"],
+          "additionalProperties": false
+        },
+        "lines": {"type": "array", "items": {"$ref": "#/$defs/line"}, "minItems": 0, "maxItems": 2048},
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scenario_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+              },
+              "reactions": {
+                "type": "array",
+                "items": {
+                  "oneOf": [{"type": "object", "properties": {"delivery": {"const": "silent"}, "reaction_id": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"}, "match": {"type": "object", "properties": {"observer_scope": {"enum": ["any", "event_actor", "event_target", "others"]}, "trait_bands": {"type": "object", "properties": {"talkative": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}, "teasing": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}, "composure": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}, "competitiveness": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}}, "required": [], "additionalProperties": false}, "guards": {"type": "array", "items": {"$ref": "#/$defs/guard"}, "minItems": 0, "maxItems": 16}}, "required": [], "additionalProperties": false}, "emotion_rule": {"type": "object", "properties": {"emotion": {"enum": ["neutral", "amused", "pleased", "annoyed", "resigned", "smug"]}, "intensity_delta": {"type": "number", "minimum": -1, "maximum": 1}, "cap": {"type": "number", "minimum": 0, "maximum": 1}}, "required": ["emotion", "intensity_delta"], "additionalProperties": false, "allOf": [{"if": {"properties": {"emotion": {"const": "neutral"}}}, "then": {"properties": {"intensity_delta": {"const": 0}}, "not": {"required": ["cap"]}}}]}, "relationship_rule": {"type": "object", "properties": {"toward": {"enum": ["actor", "event_target", "player"]}, "affinity_delta": {"type": "integer", "minimum": -32768, "maximum": 32767}, "familiarity_delta": {"type": "integer", "minimum": -32768, "maximum": 32767}}, "required": ["toward"], "additionalProperties": false, "anyOf": [{"required": ["affinity_delta"]}, {"required": ["familiarity_delta"]}]}, "gesture_hint": {"enum": ["idle", "talk", "draw", "discard", "claim", "win", "react"]}, "$comment": {"type": "string", "minLength": 1, "maxLength": 1024}}, "required": ["delivery", "reaction_id", "match", "gesture_hint"], "additionalProperties": false}, {"type": "object", "properties": {"delivery": {"const": "speak"}, "reaction_id": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"}, "match": {"type": "object", "properties": {"observer_scope": {"enum": ["any", "event_actor", "event_target", "others"]}, "trait_bands": {"type": "object", "properties": {"talkative": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}, "teasing": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}, "composure": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}, "competitiveness": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 2, "maxItems": 2}}, "required": [], "additionalProperties": false}, "guards": {"type": "array", "items": {"$ref": "#/$defs/guard"}, "minItems": 0, "maxItems": 16}}, "required": [], "additionalProperties": false}, "emotion_rule": {"type": "object", "properties": {"emotion": {"enum": ["neutral", "amused", "pleased", "annoyed", "resigned", "smug"]}, "intensity_delta": {"type": "number", "minimum": -1, "maximum": 1}, "cap": {"type": "number", "minimum": 0, "maximum": 1}}, "required": ["emotion", "intensity_delta"], "additionalProperties": false, "allOf": [{"if": {"properties": {"emotion": {"const": "neutral"}}}, "then": {"properties": {"intensity_delta": {"const": 0}}, "not": {"required": ["cap"]}}}]}, "relationship_rule": {"type": "object", "properties": {"toward": {"enum": ["actor", "event_target", "player"]}, "affinity_delta": {"type": "integer", "minimum": -32768, "maximum": 32767}, "familiarity_delta": {"type": "integer", "minimum": -32768, "maximum": 32767}}, "required": ["toward"], "additionalProperties": false, "anyOf": [{"required": ["affinity_delta"]}, {"required": ["familiarity_delta"]}]}, "gesture_hint": {"enum": ["idle", "talk", "draw", "discard", "claim", "win", "react"]}, "$comment": {"type": "string", "minLength": 1, "maxLength": 1024}, "dialogue_act": {"$ref": "#/$defs/dialogueAct"}, "lines": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"}, "minItems": 1, "maxItems": 64, "uniqueItems": true}}, "required": ["delivery", "reaction_id", "match", "gesture_hint", "dialogue_act", "lines"], "additionalProperties": false}]
+                },
+                "minItems": 1,
+                "maxItems": 64
+              }
+            },
+            "required": ["scenario_id", "reactions"],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 1024
+        },
+        "$comment": {"type": "string", "minLength": 1, "maxLength": 1024}
+      },
+      "required": ["schema_version", "pack_id", "version", "catalog", "character_ref", "lines", "scenarios"],
+      "additionalProperties": false
+    },
+    "proposalMetadata": {
+      "type": "object",
+      "properties": {
+        "schema_version": {"const": 1},
+        "proposal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}-[a-z_]+-\\d+(?![\\s\\S])"
+        },
+        "teacher_role": {
+          "enum": ["scene_explorer", "character_behavior_designer", "dialogue_writer", "coverage_critic", "quality_reviewer"]
+        },
+        "scenario_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "target_pack": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(?![\\s\\S])"
+        },
+        "proposal_kind": {"enum": ["scenario", "reaction", "candidate_lines", "coverage_report", "quality_review"]},
+        "source_event_schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(?![\\s\\S])"
+        },
+        "character_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*@(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})(?![\\s\\S])"
+        },
+        "generator_model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "generator_prompt_version": {"type": "string", "minLength": 1, "maxLength": 256},
+        "generated_at": {"type": "string", "minLength": 1, "maxLength": 256, "format": "date-time"},
+        "inputs": {
+          "type": "object",
+          "properties": {
+            "fixture_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+            },
+            "recent_delivered_sample": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+              },
+              "minItems": 0,
+              "maxItems": 16,
+              "uniqueItems": true
+            }
+          },
+          "required": ["fixture_id"],
+          "additionalProperties": false
+        },
+        "payload_ref": {"type": "string", "minLength": 1, "maxLength": 256},
+        "review_status": {
+          "enum": ["draft", "schema_validated", "semantically_validated", "coverage_reviewed", "human_reviewed", "approved", "rejected", "superseded"]
+        },
+        "licensing_notes": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "content_hash": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-f0-9]{64}(?![\\s\\S])"},
+        "supersedes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "superseded_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "human_reviewer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-z][a-z0-9_.-]*(?![\\s\\S])"
+        },
+        "review_notes": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "$comment": {"type": "string", "minLength": 1, "maxLength": 1024}
+      },
+      "required": [
+        "schema_version",
+        "proposal_id",
+        "teacher_role",
+        "scenario_id",
+        "target_pack",
+        "proposal_kind",
+        "source_event_schema",
+        "character_revision",
+        "generator_model",
+        "generator_prompt_version",
+        "generated_at",
+        "inputs",
+        "review_status",
+        "licensing_notes"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {"properties": {"review_status": {"not": {"const": "draft"}}}},
+          "then": {"required": ["payload_ref", "content_hash"]}
+        },
+        {
+          "if": {"properties": {"review_status": {"enum": ["human_reviewed", "approved"]}}},
+          "then": {"required": ["human_reviewer"]}
+        }
+      ]
+    }
+  }
+}

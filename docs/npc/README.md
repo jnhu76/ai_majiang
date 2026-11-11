@@ -1,8 +1,9 @@
 # NPC 行为契约（v1 草案）
 
 状态：**契约草案**。对应 [ADR-0001](../adr/0001-npc-offline-authoring-pipeline.md)
-（Accepted）。Schema 与流程尚未实现；本目录定义的是后续实现 PR 必须满足
-的契约，以及可离线校验的示例。
+（Accepted）。[Schema](npc-v1.schema.json) 和
+[离线校验器](validate_examples.py) 可验证示例。NPC Runtime、内容安装器及
+Golden 运行器为待实现接口。
 
 | 文档 | 内容 |
 |---|---|

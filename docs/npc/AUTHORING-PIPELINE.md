@@ -67,20 +67,21 @@ Offline Native Runtime（随 app / 官方内容包分发）
 
 ## 3. 提案元数据与追踪
 
-每份提案带元数据，示例见
+机器约束见 [NPC v1 Schema](npc-v1.schema.json)。自动校验、重复检测结果及模型
+自评可作为提案工件中的附属报告。每份提案带元数据，示例见
 [examples/proposal-metadata.v1.json](examples/proposal-metadata.v1.json)：
 
 | 字段 | 说明 |
 |---|---|
 | `proposal_id` | 全局唯一，`<日期>-<role>-<序号>` |
 | `scenario_id` / `target_pack` | 提案归属的场景与目标行为包 |
-| `source_event_schema` | 依据的公开事件 Schema 版本 |
+| `source_event_schema` | 依据的目录格式及修订，形如 `scenario-catalog.v1@2026.11.0` |
 | `character_revision` | 依据的角色档案修订 |
 | `generator_model` / `generator_prompt_version` / `generated_at` | 生成来源（模型 ID + 模板版本 + 时间），可复现追溯 |
 | `teacher_role` | 五角色之一 |
 | `review_status` | `draft → schema_validated → semantically_validated → coverage_reviewed → human_reviewed → approved / rejected / superseded` |
-| `validation_result` | 自动校验器输出摘要 |
-| `content_hash` | 提案内容哈希（与审核记录绑定） |
+| `inputs.fixture_id` / `recent_delivered_sample` | 授权或合成夹具 ID 与可选台词样本 ID |
+| `payload_ref` / `content_hash` | 提案工件引用和原始字节 SHA-256。草稿可省略，进入审查状态后必填 |
 | `licensing_notes` | 素材来源与许可声明（必填） |
 | `human_reviewer` / `review_notes` | 人工审核记录 |
 | `supersedes` / `superseded_by` | 修订链 |
@@ -101,8 +102,8 @@ Offline Native Runtime（随 app / 官方内容包分发）
 
 ## 5. 工具形态（v1）
 
-- 一组离线脚本 + 提示词模板 + 校验器，随仓库 `tools/`（后续 PR）分发，
-  可在无网络环境对已导出的模型输出重放校验（模板与输出版本化）。
+- [示例校验器](validate_examples.py) 已支持离线验证文档夹具。提案工件校验、
+  提示词模板与批量工具在后续 PR 实现。
 - Python 仅作为离线工具语言（与 `benchmarks/` 现状一致），**不是游戏依
   赖**；核心 C++20 构建不依赖它。
 - 不建常驻服务、任务队列系统或数据库；CI 中作为一次性 Job 运行。

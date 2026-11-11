@@ -1,184 +1,111 @@
-# BehaviorPack v1 数据契约 — 草案
+# BehaviorPack v1 数据契约
 
-归属：[ADR-0001](../adr/0001-npc-offline-authoring-pipeline.md)。本文定
-义角色行为包的结构、校验与迁移。机器可读示例见
-[examples/](examples/)；示例中的角色与台词**仅用于 Schema 说明**，不是产
-品内容。
+归属 [ADR-0001](../adr/0001-npc-offline-authoring-pipeline.md)。本契约
+定义首个 Headless Golden 切片的内容格式。[示例](examples/)用虚构角色，
+供静态验证和未来夹具使用。
 
-## 1. 三层内容模型
+## 1. 内容所有权
 
-| 层 | 工件 | 所有者 | 内容 |
-|---|---|---|---|
-| 场景词汇 | Scenario Catalog（`scenario-catalog.v1.json`） | app，随版本发布 | typed trigger、guards、priority、cooldown、silence_policy、observer_filter |
-| 角色反应 | BehaviorPack v1（每角色一份 JSON） | 角色作者/官方流水线 | 按 `scenario_id` 的反应 + 内嵌台词库 |
-| 角色身份 | CharacterPack（评审 ADR-06 的 manifest） | 角色作者 | 身份、SOUL、traits、声音、形象、动画 |
+| 工件 | 所有者与内容 |
+|---|---|
+| Scenario Catalog | app 随版本提供共享场景词汇、触发器、守卫及发言调度参数。 |
+| BehaviorPack | 独立版本化的角色反应和台词库。场景用 `scenario_id` 引用。 |
+| CharacterPack | 角色身份、SOUL、traits、声线和已批准演出资源，精确引用一份 BehaviorPack。 |
 
-## 2. 独立工件 vs 嵌入 CharacterPack（裁决）
+独立工件支持跨角色覆盖分析与独立更新，代价是安装时必须校验引用。
+CharacterPack 与 BehaviorPack 作为一对快照固定到整局。场外 Teacher Model
+只能提出内容，经验证和人工批准后才可编入 BehaviorPack。
 
-| 维度 | 独立 BehaviorPack 工件（**采用**） | behavior 文件嵌入 CharacterPack |
+## 2. 安装与引用
+
+- CharacterPack 对 BehaviorPack 的引用是 `(pack_id, version, content_hash)`，
+  哈希为该版本 BehaviorPack JSON 发布文件原始 UTF-8 字节的 SHA-256 小写
+  十六进制。BehaviorPack 的 `character_ref` 反向确认
+  `(CharacterPack.pack_id, character_id)` 身份。它不参与依赖解析，避免循环哈希。
+- 版本和目录修订号按三个非负整数组成的元组比较。安装时当前 Catalog 与
+  BehaviorPack 的 `schema_version` 均须为 1，目录修订须 ≥ `min_revision`。
+  已发布目录 v1 内，同一场景 ID 的含义须保持兼容。
+- 安装期执行 Schema 与语义检查。官方包遇到未知 `scenario_id` 失败，用户
+  导入包的未知场景条目标记为惰性并报告。惰性条目仍校验自身结构、包内
+  ID、引用和台词语义，跳过需要已知触发器的校验。
+- 角色、声线与资产必须解析到同一 CharacterPack 快照。拟议
+  `ContentPackManager` 在安装时核验资源存在性、资产字节哈希、包的体积
+  预算、授权与批准记录。四个文档示例只使用合成角色引用，未携带可安装包
+  或音频资源。
+
+## 3. Schema 和反应顺序
+
+[Draft 2020-12 Schema](npc-v1.schema.json) 提供三种根结构
+`scenarioCatalog`、`behaviorPack`、`proposalMetadata`。它规定必填字段、
+封闭枚举、数值边界及数量上限，未知字段拒绝。JSON 重复成员名拒绝。
+日期格式验证需要开启 `date-time` 格式检查。触发器和守卫的执行语义见
+[Scenario Model](SCENARIO-MODEL.md)。
+
+- 目录 `scenario_id` 唯一。包内 `scenario_id`、`reaction_id` 和
+  LineId 分别在其所属集合内唯一。反应的 LineId 必须在同一包内解析。
+- 对每个观察者按 JSON 数组顺序取第一个满足 `match` 的反应。多个 trait
+  带、作用域及守卫是 AND，带端点都包含，`lower ≤ upper`。无条件反应如
+  `match: {}` 只能在末尾。场景的 `priority` 只控制 SocialDirector
+  的调度，不重排匹配。第一条命中后，即使该反应沉默或被冷却，也不试下一条。
+- 目录的 `observer_filter` 先选候选观察者，再判断反应的
+  `observer_scope`。缺省 `any` 表示候选全集。`event_actor`、
+  `event_target` 分别选中角色位，`others` 排除两者中存在的座位。
+  v1 只有碰牌触发器提供 target，其他触发器引用 target 属安装错误。
+- `delivery=silent` 携带演出提示及可选状态规则。`speak` 必须声明
+  DialogueAct 及非空 LineId 集，反应与每条引用台词的 `dialogue_act`
+  必须完全相等，否则校验失败。Gesture 默认取反应的 `gesture_hint`，
+  台词可用 `gesture` 覆盖。情绪和关系更新遵循 Scenario Model §4。
+- DialoguePolicy 只接收已过滤的候选。首个切片按反应中 LineId 顺序构建候
+  选，过滤无效公开事实，剔除该座最近实际交付的一条 LineId（若剔除后为
+  空则保留原集合）。空集返回 Silence；单候选直接选中。多个候选由加权策略
+  按 `weight` 选择。用夹具固定 seed、候选顺序和 RNG 消费次序。模型选择
+  只允许本次传入的候选 ID，失效时丢弃，模型失败且仍有效时走同一集合的
+  确定性选择。
+
+## 4. 台词、槽位与音频
+
+台词的 `text` 是已审核的静态原文或模板。首个切片支持 `zh-Hans`。占位符
+用 `{name}`，正文占位符集合须与 `slots` 精确相等，允许同一槽重复出现，
+拒绝未解析花括号。所有值取自触发时已确认且绑定同一作用域的公开快照。
+
+| 槽位 | Formatter | 输入与文本格式 |
 |---|---|---|
-| 跨包覆盖/重复分析 | 可静态分析：解析 N 份包即可回答“场景 X 谁覆盖了” | 场景定义分散在各角色包，易漂移 |
-| 第三方角色包 | 只需引用共享目录词汇，安装时校验引用 | 每个作者自行复制场景定义，版本漂移 |
-| 独立演进/替换 | 可单独版本化、内容哈希 pin、热更新 | 与角色身份耦合，换行为＝换角色包 |
-| 运行时复杂度 | 安装期解析一次 `(pack_id, version, content_hash)` 引用 | 无需解析（但也没有上述能力） |
-| 代价 | 需要 CharacterPack 声明唯一引用 + 安装期校验 | 无 |
+| `claim_count` | `hand_claim_count_by_seat` | 本手 actor 从 event_target 的舍牌完成的碰牌次数，包含当前事件。正整数用 ASCII 十进制，无前导零。 |
+| `tile` | `tile_name` | 当前已公开的碰牌牌面。ID 0–26 顺序为一至九万、筒、条，27–33 为东风、南风、西风、北风、红中、发财、白板。 |
+| `streak` | `win_streak` | 截至上一手的玩家连续获胜数，正整数用 ASCII 十进制，无前导零。 |
 
-**裁决**：BehaviorPack 是独立版本化工件；CharacterPack 以
-`(pack_id, version, content_hash)` **精确引用恰好一份**，安装期解析、运
-行时按局 pin——这是“有引用、无依赖图”的折中，**不建跨包依赖管理器**。
-同一时刻每座解析为恰好一个 `(CharacterPack, BehaviorPack)` 快照。
+| `voice.audio` | 安装期规则 | 投递期规则 |
+|---|---|---|
+| 省略 | 审核静态文案或模板。 | 发布同作用域的已验证字幕。 |
+| `mode: clip` | 只用于零槽位台词。用 `clip`、`audio_sha256`、声线和审核原文绑定 WAV。 | 仅可播放绑定原文的已验证 WAV。资源不可用则发布同一句字幕。 |
+| `mode: variants` | 至少有一个槽。每项声明完整、唯一的原始类型 `bindings`、渲染后的审核 `text`、`clip` 和 `audio_sha256`。安装校验模板渲染等于该项文本，人工批准录音与文本、语言及声线相符。 | 用全部真实槽值精确匹配唯一变体，且变体原文等于本次渲染才可播放。没有精确匹配或音频不可用时，仅发布同一渲染结果的字幕。 |
+| `mode: tts` | 审核原文、槽位来源和声线映射。 | 本地 TTS 使用已验证字幕的同一文本。TTS 不可用、失败或超出语音预算时，在仍有效的作用域内仅发布同一句字幕。 |
 
-引用校验策略：官方包中未解析的 `scenario_id` 一律构建失败；用户导入包中
-未解析的 `scenario_id` 降级为**惰性条目**（永不匹配、安装报告列明），保
-持 ADR-06 的向后兼容姿态。
+安装时每个 clip ID 在所属 CharacterPack 内只能绑定一组资源哈希、审核文本
+及声线。同一资源哈希不能绑定不同文字或声线。资产校验确认字节，语音内容
+的准确性由人工听审确认。严禁用其他绑定值的 WAV 补位。
 
-## 3. JSON Schema 草案
+投递前核验已提供的 LineId、角色、声线、有效作用域、槽值完整性和音频绑定。
+无法从公开事实得出字幕时静默，作用域过期时丢弃字幕及音频。仅实际投递
+更新 `recent_delivered`。Schema 和离线脚本只验证静态形状与引用，运行时
+投递、实际音频、角色安装和资产校验留待后续实现。
 
-### 3.1 场景目录条目
+## 5. 离线验证
 
-```json
-{
-  "scenario_id": "player.idle.long",
-  "title": "玩家长时间未出牌",
-  "category": "player_behavior.waiting",
-  "trigger": { "kind": "player_idle", "duration_band": "long" },
-  "guards": [
-    { "kind": "game_active", "expect": true },
-    { "kind": "speaker_not_current_player", "expect": true }
-  ],
-  "priority": "normal",
-  "cooldown": { "per_scenario_s": 90, "per_speaker_s": 6 },
-  "silence_policy": "allow",
-  "max_followups": 1,
-  "observer_filter": "all_npc_except_current_player",
-  "notes": "等待触发由表现层产生；见 SCENARIO-MODEL.md §5"
-}
+在预装 `jsonschema` 4.x 的开发环境，从仓库根目录运行：
+
+```sh
+python docs/npc/validate_examples.py --self-test
 ```
 
-必填：`scenario_id/title/category/trigger/priority/cooldown/
-silence_policy/max_followups/observer_filter`；`guards` 可选。字段语义见
-[SCENARIO-MODEL.md](SCENARIO-MODEL.md) §2。
+脚本离线校验四份 JSON、合成角色/声线引用、目录/包/反应/台词引用及音频
+绑定元数据。静态反例覆盖错误字段/枚举/参数、错误引用、被无条件反应遮蔽
+的顺序、不可达回应和音频不一致。C++ 核心构建无需 Python。
 
-### 3.2 BehaviorPack
+## 6. P2 银行迁移
 
-```json
-{
-  "schema_version": 1,
-  "pack_id": "org.aimj.demo.behavior.jiang-xiaokuai",
-  "catalog": { "min_revision": "2026.11.0" },
-  "character_ref": { "pack_id": "org.aimj.demo.jiang-xiaokuai", "character_id": "jiang-xiaokuai" },
-  "lines": [ /* 台词库，见 §4 */ ],
-  "scenarios": [
-    {
-      "scenario_id": "player.idle.long",
-      "reactions": [
-        {
-          "reaction_id": "jj_idle_impatient",
-          "match": { "trait_bands": { "composure": [0.0, 0.45] } },
-          "emotion_rule": { "emotion": "annoyed", "intensity_delta": 0.3, "cap": 0.9 },
-          "delivery": "speak",
-          "dialogue_act": "urge_player",
-          "gesture_hint": "react",
-          "lines": ["jj_idle_urge_01", "jj_idle_urge_02"]
-        },
-        {
-          "reaction_id": "jj_idle_silent_huff",
-          "match": { "trait_bands": { "talkative": [0.0, 0.35] } },
-          "emotion_rule": { "emotion": "annoyed", "intensity_delta": 0.2 },
-          "delivery": "silent",
-          "gesture_hint": "react"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### 3.3 emotion / gesture / dialogue_act 的位置（裁决）
-
-**不**把三者放进同一个结构（需求示例的写法），拆为：
-
-- `emotion_rule` 在**反应**上：情绪演化对**所有**匹配观察者生效，与是否
-  发言无关；沉默角色也要生气。
-- `dialogue_act` 在**反应**上、并冗余标注在每条**台词**上：反应决定想表
-  达什么；台词标签用于过滤、多样性约束与评测统计（缺失或冲突时以反应为
-  准并报校验警告）。
-- `gesture_hint` 在反应上（沉默演出也需要表情/动作），**台词可覆盖**
-  （`line.gesture`）：某句台词自带固定动作（如“哼”配摆手）。
-- 台词正文、声音、clip 属于**台词库条目**（资产层），不进反应结构。
-
-理由：同一反应映射多条台词形成变化；情绪与发言解耦；资产与逻辑分离；
-校验器可以分层检查。
-
-### 3.4 反应匹配语义
-
-- 反应按声明顺序匹配，首个 `match` 命中者生效（每观察者至多一条）；
-  `trait_bands` 是对 `[0,1]` traits 的闭区间谓词（v1 用区间而非命名
-  persona，保持 CharacterDefinition.traits 单一事实源；可加
-  `persona_hint` 作纯文档注记）。
-- `match.observer_scope` 把反应限定到与事件角色的关系，v1 封闭枚举：
-  `any`（默认）/ `event_actor`（动作发起者，如碰牌者）/ `event_target`
-  （动作承受者，如被碰的舍牌者）/ `others`。目录的 `observer_filter` 先
-  选出候选观察者集合，反应再用 `observer_scope` 细分。
-- 反应可附加 `guards`（与目录守卫同词汇）表达情绪/记忆/关系条件，如
-  “同一座位本手已从我处碰牌 ≥2 次”。
-- 反应可携带 `relationship_rule`（声明式、确定性）：对事件角色引用
-  （`claimer`/`actor` 等）做 `familiarity_delta`/`affinity_delta` 小步
-  更新，写入 `CharacterRuntimeState.relationships`；与情绪一样**不是**模
-  型输出。
-- 无命中 → 无情绪变化 + 按 `silence_policy` 沉默（或中性兜底）。
-
-## 4. 台词库条目
-
-```json
-{
-  "id": "jj_idle_urge_01",
-  "dialogue_act": "urge_player",
-  "locale": "zh-Hans",
-  "text": "出牌呀，我茶都续第二回了。",
-  "voice": { "voice_id": "jj-bright", "clip": "jj_idle_urge_01", "audio_sha256": "…" },
-  "gesture": "react",
-  "slots": [],
-  "weight": 2,
-  "tags": ["idle", "urge"]
-}
-```
-
-- `text` 为已审核原文；带事实槽位的行用 `slots`（只能引用公开事实格式化
-  器，如 `{tile}`、`{score_delta}`），与 P2 的关键词校验同思路。
-- `voice.clip` 缺失（无预制音频）时按能力降级：仅字幕或 TTS；声线映射
-  由 `voice_id → VoiceProfile → provider SID`，沿用评审 ADR-03/04 的边界。
-- 权重与近期窗口构成加权选择；`recent_delivered` 只记实际交付。
-- DialogueAct v1 封闭枚举：`silence, urge_player, tease, console, praise,
-  brag, grumble, callout, congratulate, vow, deflect, question`。
-- 手势 v1 复用评审 ADR-05 身体动作词汇：`idle, talk, draw, discard,
-  claim, win, react`；表情由更新后的 `EmotionState` 驱动，不单独声明。
-
-## 5. 校验
-
-**安装期**（`ContentPackManager`，评审 ADR-06 同一边界）：Schema 校验；
-`scenario_id` 引用解析（官方严格/用户惰性）；台词 ID 唯一且被引用即存在；
-`dialogue_act/gesture/emotion` 枚举合法；traits 区间合法；音频/clip 资源
-存在且哈希匹配；locale 完整；许可字段存在；条目数与体积上限。
-
-**投递期**（ValidatedLine 构造）：候选 ID ∈ 本次提供集合；人格/声线/作
-用域（`match/hand/event/cue/epoch`）复核；槽位格式化后复核；失败 → 沉
-默或中性兜底，绝不发布未验证文本。
-
-## 6. P2 银行迁移与向后兼容
-
-- 现有 `voice::Director` 的 `(event_type, fact_key, speaker)` 精确匹配
-  与 P2 TSV 银行是本契约的**前身**：离线转换器把 TSV 行映射为
-  `domain_event` 触发的场景条目 + 台词库条目
-  （`line_id→id`、`persona_id→traits 带`（经映射表）、`tts_sid→
-  voice_id`、`weight` 原样保留）。
-- 迁移期内 P2 CLI 与夹具**原样保留**可复现；产品路径切换到 BehaviorPack
-  后，P2 的 fixed/weighted 继续作为对照基线。**不并行维护两套产品台词选
-  择状态**：`voice::Director` 的轮转/近期逻辑并入新的确定性
-  `IDialoguePolicy` 实现后，旧接口仅保留给实验探针。
-- 已归档 P1/P2 实验目录（`docs/experiments/2026-11-*`）不因本契约修改。
-
-## 7. 明确不做（v1）
-
-不做跨包依赖管理器、条件脚本、行为树、外部引擎回调；不支持行为包引用其
-他行为包；不做多语言自动翻译（locale 各自审核）；不做运行时热编辑。
+现有 `voice::Director` 使用 `(event_type, fact_key, speaker)` 精确查找 P2
+TSV 银行。未来离线转换器可保留 `line_id` 和 `weight`，根据经核实的公开
+事件映射、角色 traits 和 `tts_sid → voice_id` 映射创建正式行为包。资产
+迁移时保留经审核的原文与 WAV 绑定。v1 词汇未覆盖的 P2 行留在实验银行。
+P2 CLI、银行、夹具及 P1/P2 归档仍供复现实验，fixed/weighted 用作对照。

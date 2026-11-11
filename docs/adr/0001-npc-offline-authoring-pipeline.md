@@ -5,7 +5,8 @@ Architecture）
 
 - **Status**: Accepted（2026-11-11）
 - **决策范围**: 本状态只批准架构原则与数据契约方向。`docs/npc/` 中的
-  Schema 是 v1 契约草案；对应运行时模块、内容编译器与设备验证**均未实现**。
+  Schema、文档夹具和离线校验器已落盘。NPC 运行时模块、内容安装器和
+  Headless Golden 运行器为 Proposed Interfaces，设备验证尚未执行。
 - **评审基线**: 独立架构评审报告（2026-11-11，审计 `29e6c5c`，外部交付物）；
   本 ADR 落盘基线 `dev@5db26bd`。
 - **关系**: 扩展评审基线 ADR-04（确定性社交导演与受约束对话）与 ADR-06
@@ -25,12 +26,14 @@ Architecture）
 5. 角色之间无有意义互动：没有接话、打趣、安慰等多角色链。
 6. 预制台词覆盖不足：独立开发者难以手工枚举人格 × 场景 × 关系 × 情绪的
    组合。
-7. 端侧 0.3B/0.6B 模型难以稳定产生有趣且事实正确的内容（P1 交互 s3 的
-   12 次成功产出使用同一句台词）。
+7. P1 的 MNN-Pocket-0.3B INT4 在交互 s3 中 12 次成功生成使用同一句
+   台词，机审事实正确为 5/12。P2 的同款模型在候选排序中与 weighted
+   同为 28 条唯一台词，未测得多样性收益。仓库没有已完成的
+   Qwen3-0.6B 对照结果，后续端侧模型的质量需要独立验证。
 8. 人力产能瓶颈：手工扩写银行不可扩展。
 
-证据：`docs/experiments/2026-11-11-p1-dialogue/REPORT.md`、
-`docs/experiments/2026-11-11-p2-voice-loop/REPORT.md`。
+证据见 [P1 报告 §2.2](../experiments/2026-11-11-p1-dialogue/REPORT.md) 和
+[P2 报告 §3.2](../experiments/2026-11-11-p2-voice-loop/REPORT.md)。
 
 同时产品约束不变：默认完全离线、无云端 API、规则权威不可被模型触碰
 （`AGENTS.md`、`docs/ARCHITECTURE.md`、评审 ADR-01/03/04/06）。
@@ -64,8 +67,9 @@ Architecture）
 
 ### B. Runtime Path（场内执行，玩家设备）
 
-运行时输入只来自：公开麻将事件投影、CharacterDefinition、
-CharacterRuntimeState、Scenario Catalog、NPC Behavior Pack。数据流：
+场景输入为公开麻将事件投影或独立 SocialCue，加上角色定义、角色运行状态、
+Scenario Catalog 和 BehaviorPack。推理故障只进入 app 的 SystemCue
+路径，可降级当前选择，不能成为权威牌局事件或触发 NPC 场景。拟议数据流：
 
 ```text
 PublicGameEvent / SocialCue
@@ -74,10 +78,10 @@ PublicGameEvent / SocialCue
 ScenarioMatcher（场景目录，声明式）
       |
       v
-BehaviorContext（冻结的公开事实 + 心理状态投影）
+BehaviorContext（冻结的公开事实 + 心理状态投影；按观察者取首条匹配反应）
       |
       v
-EmotionReducer（确定性规则）──> CharacterRuntimeState
+EmotionReducer（纯计算）──> CharacterRuntimeState（拥有者提交）
       |
       v
 SocialDirector（发言节奏权威：优先级/冷却/沉默/一次回应）
@@ -95,18 +99,17 @@ ValidatedLine + PresentationIntent
    规则以声明式数据随行为包分发（场外大模型可以提议规则，审核后编译为
    数据）。端侧模型永远不设置情绪。
 2. **端侧模型第一阶段只做“对已提供候选 LineId 的受约束选择/排序”**，
-   沿用评审 ADR-04 的“只返回合法候选 ID”契约与 `OutputShape.allowed_ids`
-   机制。DialogueAct 是台词与反应的语义标签（用于过滤、多样性约束与评
+   遵循评审 ADR-04 的“只返回合法候选 ID”原则，拟议接口为
+   `OutputShape.allowed_ids`。DialogueAct 是台词与反应的语义标签（用于过滤、多样性约束与评
    测），暂不作为模型的第一输出层；受约束短句生成仅保留为实验选项，默
    认关闭。
 3. **运行时策略阶梯**（自上而下逐步引入，每级都要过评测门）：
    确定性轮转（现状，P2 已证）→ 加权选择（默认）→ 小模型候选排序（可
    选实验）→ 受约束生成（远期实验）。禁止跳级默认开启。
 4. **沉默是一等结果。** 场景可声明沉默策略；无合格候选、冷却中、节奏不
-   允许时都走沉默或中性兜底，不强行发言。
-5. **防无限对话**：每条发言最多触发一次带 `exchangeId` 的一次性回应；
-   NPC 不能对自己的发言递归生成新话题；发言与全局双冷却由 SocialDirector
-   强制。
+   允许时保持沉默。
+5. **回应上限**：仅实际交付的原始发言可按目录配额发出一个回应 cue。
+   回应终止，重复和过期回执不能生成回应。SocialDirector 负责双冷却。
 6. **等待类社交触发（如玩家 20 秒未出牌）属于表现/社交层**，由 app 控制
    器经可注入时钟产生 SocialCue，不写入麻将权威记录；测试与回放使用可控
    时钟 + 已记录的 cue 事件。见
@@ -134,20 +137,17 @@ ValidatedLine + PresentationIntent
 
 ### 与评审 ADR-04 / ADR-06 的边界
 
-不创建第二套并行 NPC 系统：`SocialDirector` 仍是发言节奏权威；
-`CharacterRuntimeState` 仍是情绪与记忆的运行时所有者；`IDialoguePolicy`
-仍是对白策略边界；`ITextGenerationBackend` 仍不理解麻将规则；
-`ICharacterAnimator` 不理解 LLM Prompt；`IAssetRepository` 不负责创作新
-内容；Teacher Model 不参与任何运行时权威计算。现有 `voice::Director` /
-P2 银行格式是 BehaviorPack 台词库的迁移来源，见
-[`docs/npc/BEHAVIOR-PACK-V1.md`](../npc/BEHAVIOR-PACK-V1.md) §6。
+此处沿用评审中的所有权划分。SocialDirector 管发言节奏，
+CharacterRuntimeState 管情绪、关系及记忆，IDialoguePolicy 管候选选择。
+接口实情见下文 Integration Points。现有 `voice::Director` 与 P2 银行
+提供迁移来源，见 [BehaviorPack §6](../npc/BEHAVIOR-PACK-V1.md)。
 
 ## Alternatives
 
 | 备选 | 裁决 | 理由 |
 |---|---|---|
 | 运行时调用云端大模型生成台词 | 拒绝 | 违反完全离线产品约束；时延、成本、隐私与事实风险不可接受。 |
-| 只靠更强端侧模型（更大本地权重）自由生成 | 拒绝 | 0.3B/0.6B 的事实正确性与趣味性已被 P1/P2 证伪；创作 breadth 需要的最强模型不可能常驻端侧。 |
+| 只靠更强端侧模型（更大本地权重）自由生成 | 拒绝 | P1 记录了 Pocket-0.3B 自由生成的事实和重复问题。P2 的候选排序结果也未测得多样性收益。放宽默认发布策略仍须证明事实正确性、趣味和资源预算，Qwen3-0.6B 结果待测。 |
 | 纯手工扩写台词银行，不建创作流水线 | 拒绝 | 独立开发者产能不足；覆盖缺口（17/43 单候选）已现；无覆盖度量则无法定位缺口。 |
 | 运行时自由生成 + 事后过滤 | 拒绝 | 任意自然语言无法靠关键词完全验真（评审 ADR-04 已裁决）；验证成本与事实风险高。 |
 | behavior 文件直接嵌入 CharacterPack、无独立工件 | 拒绝 | 无法对场景覆盖/重复做跨包静态分析，第三方角色包会各自漂移场景定义；代价是引用校验，收益是单一可校验工件。对比见 [`docs/npc/BEHAVIOR-PACK-V1.md`](../npc/BEHAVIOR-PACK-V1.md) §2。 |
@@ -173,8 +173,8 @@ P2 银行格式是 BehaviorPack 台词库的迁移来源，见
 - 代价与义务：
   - 必须维护场景目录版本与行为包兼容矩阵；新增 trigger/guard 种类需要
     代码 + Schema 版本共同演进（有意的摩擦）。
-  - 必须建设最小离线工具：Schema 校验器、覆盖/重复分析、提案元数据格
-    式、Golden 场景运行器（后续独立 PR）。
+  - 示例 Schema 校验器和提案元数据格式已落盘。覆盖/重复分析及
+    Golden 场景运行器留待后续 PR。
   - 人工审核是产能瓶颈，流水线必须把人的注意力集中在有争议的提案上。
   - 场外模型输出的情绪/关系规则必须人工审核后编译为数据，不允许自由数
     值模型直接上线。
@@ -195,16 +195,15 @@ P2 银行格式是 BehaviorPack 台词库的迁移来源，见
    是不可信风格素材，只能以受控定界进入提示词，不作为 system 指令。
 5. 对话绑定 `match/hand/event/cue/presentation_epoch`；换局、暂停、退
    出、角色替换后旧输出必须失效。
-6. `recent_delivered` 只按**实际交付结果**（`DeliveredSpeech`）更新，不是
-   模型选中即更新。
-7. 模型只能选择本次请求明确提供的候选 ID（`OutputShape.allowed_ids` 语
-   义）；未提供/过期的 ID 一律拒绝并走确定性兜底。
+6. `recent_delivered` 只按**实际交付结果**（`DeliveredSpeech`，含有效字幕）更新。
+7. 模型只能选择本次请求明确提供的候选 ID（拟议 `OutputShape.allowed_ids`）。
+   未提供的 ID 拒绝；作用域仍有效时可回退到确定性策略，过期则丢弃。
 8. 场景触发与情绪演变只依赖公开事件、声明式规则与记录在案的 cue，不依赖
    不可复现的隐含模型状态。
-9. 同一输入（事件序列 + 包版本 + 初始状态 + RNG seed）下，无模型路径的
-   全部输出（匹配、情绪、意图、候选、演出）逐位可复现。
-10. 每桌同一时刻至多一条口播；每次发言至多一次带 `exchangeId` 的回应；
-    NPC 不得递归自我触发。
+9. 固定有序事件与 cue、单调 tick、包版本、初始状态和 RNG seed 后，
+   无模型路径的场景、情绪、候选和演出意图应可复现。
+10. 每桌同一时刻至多一条口播。每次原始交付至多一次带 `exchangeId` 的回应，
+    回应不会再触发回应。
 
 ## Security Boundaries
 
@@ -219,27 +218,25 @@ P2 银行格式是 BehaviorPack 台词库的迁移来源，见
 
 ## Integration Points
 
-| 模块 | 本决策下的角色 |
-|---|---|
-| `GameSession` / 公开投影 | 唯一事实来源；向社交层输出公开事件，不接受社交层写回。 |
-| `SocialDirector` | 发言节奏与互动链权威；消费 `SpeechPlan`/`ValidatedLine`，不匹配场景、不算情绪。 |
-| `CharacterRuntimeState` | 情绪、关系、记忆、`recent_delivered` 的运行时所有者；只被 EmotionReducer 与交付回执更新。 |
-| `ScenarioMatcher` / `EmotionReducer`（新增，后续 PR） | 纯函数组件，输入目录/行为包数据与冻结上下文，无 I/O、无模型。 |
-| `IDialoguePolicy` | 候选选择边界；默认确定性加权实现，可选模型排序实现共用同一候选集。 |
-| `ITextGenerationBackend` / `ModelManager` | 不理解麻将；只接受消息 + `OutputShape` 约束，返回候选 ID。 |
-| `voice::Director` / P2 银行 | BehaviorPack 台词库与确定性选择器的迁移来源，迁移期内不并行维护两套产品台词选择状态。 |
-| `ContentPackManager` / `IAssetRepository`（评审 ADR-06） | BehaviorPack 按同一声明式包边界安装、校验、pin 版本。 |
-| `ICharacterAnimator` / 表现层 | 只接收 `PresentationIntent`（情绪态 + 手势枚举），不接触提示词。 |
-| Axmol app 控制器 | 等待类 SocialCue 的产生者（可注入时钟）与 presentation epoch 的分配者。 |
+| 状态 | 模块 | 本决策下的角色 |
+|---|---|---|
+| Existing | [`GameSession`](../../include/aimj/game.hpp) | 权威所有者。当前是 DemoRuleSet 和 `DemoTileTapped`；麻将公开事件投影是后续工作。 |
+| Existing | [`ILlmBackend` / `AiRuntime`](../../include/aimj/runtime.hpp) | 当前生成接口接收 prompt 与 speaker，返回文本。 |
+| Existing | [`voice::Director` / P2 银行](../../include/aimj/voice_loop.hpp) | 台词库与确定性选择器的迁移来源。 |
+| Proposed Interfaces | `ScenarioMatcher` / `EmotionReducer` / `CharacterRuntimeState` | 匹配和计算为纯函数，由每座状态拥有者提交；持有情绪、关系、记忆和实际交付记录。 |
+| Proposed Interfaces | `SocialDirector` / `IDialoguePolicy` | 前者授予发言许可及一次回应配额，后者从已过滤候选中选择。 |
+| Proposed Interfaces | `ITextGenerationBackend` / `ModelManager` / `OutputShape.allowed_ids` | 适配现有端侧能力的拟议边界，输入只含公开事实与已提供的候选。 |
+| Proposed Interfaces | `ContentPackManager` / `IAssetRepository` | 安装、校验及固定声明式包。 |
+| Proposed Interfaces | `ICharacterAnimator` / app cue 与 epoch 集成 | 消费 `PresentationIntent`；app 生成等待 cue、隔离 SystemCue 并管理 epoch。 |
 
 ## Migration
 
-分阶段，均以独立 PR 交付；本轮仅落盘文档与示例。
+分阶段交付。本轮包含文档、示例、Schema 和开发期校验器。
 
-1. **已批准（本 PR）**：ADR + `docs/npc/` 四份契约 + JSON 示例。
+1. **本 PR**：ADR、v1 契约、JSON 示例与离线校验。
 2. **最小验证切片（下一 PR，必须立即开发）**：场景目录 v1 加载器 +
-   ScenarioMatcher + EmotionReducer + 确定性加权 `IDialoguePolicy` +
-   Golden 场景运行器（headless，无模型），覆盖三个示范场景
+   ScenarioMatcher + EmotionReducer + SocialDirector 最小节奏控制 +
+   确定性 `IDialoguePolicy` + Golden 场景运行器（headless，无模型），覆盖三个示范场景
    （`player.idle.long`、`game_action.meld.claimed_of_my_discard`、
    `continuity.hand_opening_after_player_win`）。
 3. **银行迁移**：离线转换器把 P2 TSV 银行导入 BehaviorPack 台词库；P2
@@ -255,8 +252,8 @@ P2 银行格式是 BehaviorPack 台词库的迁移来源，见
 
 本 ADR 自身：
 
-- `docs/npc/` 文档间术语、枚举与示例一致；JSON 示例通过语法校验；所有内
-  部链接可达；CI（headless 无模型构建 + CTest）不受影响。
+- `docs/npc/` 文档间术语、枚举与示例一致，四份示例及反例通过
+  [离线验证](../npc/BEHAVIOR-PACK-V1.md)。内部链接可达，既有无模型 CI 通过。
 
 未来实现切片验收（在对应 PR 中逐项给出证据）：
 
