@@ -3,7 +3,7 @@
 - **任务**：把"场外大模型辅助创作与评审、场内小模型辅助执行、确定性系统兜底"提交至以 `dev` 为目标的 ADR PR。
 - **日期**：2026-11-11
 - **落盘基线**：`dev@5db26bd`（评审报告基线 `29e6c5c` 为其祖先，无冲突）
-- **交付物**：分支 `docs/npc-teacher-student-adr`，契约修复 commit `e4c968b461f37c06a5ec27e24f1819497925a9f6`，PR [jnhu76/ai_majiang#12](https://github.com/jnhu76/ai_majiang/pull/12)（目标 `dev`，未合并）
+- **交付物**：分支 `docs/npc-teacher-student-adr`，契约修复 commit `6806680451408d3b475a30123ad07e0ea5dc52eb`，PR [jnhu76/ai_majiang#12](https://github.com/jnhu76/ai_majiang/pull/12)（目标 `dev`，未合并）
 - **本报告**：交付记录，独立成 PR；**允许未来不合并**。文档链接固定到上述 #12 提交。若 #12 的契约继续改动，更新报告所引用的提交和事实。
 
 ---
@@ -42,7 +42,7 @@
 
 音频契约区分静态 WAV、绑定全部公开槽值的有限 WAV 变体、动态本地 TTS 和
 同一句字幕回退。投递校验无法验证槽位时静默，禁止用其他槽值的录音补位。
-契约：[BEHAVIOR-PACK-V1.md](https://github.com/jnhu76/ai_majiang/blob/e4c968b461f37c06a5ec27e24f1819497925a9f6/docs/npc/BEHAVIOR-PACK-V1.md)。
+契约：[BEHAVIOR-PACK-V1.md](https://github.com/jnhu76/ai_majiang/blob/6806680451408d3b475a30123ad07e0ea5dc52eb/docs/npc/BEHAVIOR-PACK-V1.md)。
 
 ## D. Module Ownership
 
@@ -65,7 +65,7 @@ app 可生成界面用的 `SystemCue`。它与进入场景匹配的公开牌局�
 
 ## E. Example Scenarios
 
-[示例 JSON](https://github.com/jnhu76/ai_majiang/tree/e4c968b461f37c06a5ec27e24f1819497925a9f6/docs/npc/examples)
+[示例 JSON](https://github.com/jnhu76/ai_majiang/tree/6806680451408d3b475a30123ad07e0ea5dc52eb/docs/npc/examples)
 配合下文 Golden 预期描述三个案例。
 
 1. **`player.idle.long`**。姜小快催牌并变为 annoyed，温阿默微笑沉默。
@@ -86,7 +86,7 @@ app 可生成界面用的 `SystemCue`。它与进入场景匹配的公开牌局�
 - **回归**：规则行为、旧场景匹配、声线映射、动画合法性、离线能力、性能预算、过期响应清理 7 条门。
 - **Golden Scenario Corpus**：固定有序事件、cue、tick、包版本和初始状态。
   三个用例规定预期匹配、情绪、台词及交付结果。Runtime NOT IMPLEMENTED。
-- 契约：[EVALUATION-PLAN.md](https://github.com/jnhu76/ai_majiang/blob/e4c968b461f37c06a5ec27e24f1819497925a9f6/docs/npc/EVALUATION-PLAN.md)。
+- 契约：[EVALUATION-PLAN.md](https://github.com/jnhu76/ai_majiang/blob/6806680451408d3b475a30123ad07e0ea5dc52eb/docs/npc/EVALUATION-PLAN.md)。
 
 ## G. Backward Compatibility
 
@@ -118,10 +118,10 @@ app 可生成界面用的 `SystemCue`。它与进入场景匹配的公开牌局�
 | 项 | 值 |
 |---|---|
 | 基线 | `dev@5db26bd` |
-| 交付分支 / commit | `docs/npc-teacher-student-adr` / [`e4c968b4`](https://github.com/jnhu76/ai_majiang/commit/e4c968b461f37c06a5ec27e24f1819497925a9f6) |
+| 交付分支 / commit | `docs/npc-teacher-student-adr` / [`68066804`](https://github.com/jnhu76/ai_majiang/commit/6806680451408d3b475a30123ad07e0ea5dc52eb) |
 | PR | [#12](https://github.com/jnhu76/ai_majiang/pull/12) → `dev` |
-| Headless CI | [修复提交的三平台 CI](https://github.com/jnhu76/ai_majiang/actions/runs/43054401023) |
-| 离线检查 | **PASS**，4 份 JSON Schema 和引用校验，2 种额外合法音频形状，26 项反例 |
+| Headless CI | [修复提交的三平台 CI](https://github.com/jnhu76/ai_majiang/actions/runs/43054895704) |
+| 离线检查 | **PASS**，4 份 JSON Schema 和引用校验，2 种额外合法音频形状、1 个合法提案修订引用和 28 项反例 |
 | Runtime / 资产 | **NOT IMPLEMENTED**，Golden 预期为契约，未验证 C++ NPC 运行时及实际录音 |
 
 ---
