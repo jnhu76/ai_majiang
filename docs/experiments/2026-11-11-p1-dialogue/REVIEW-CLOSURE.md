@@ -134,12 +134,26 @@ git diff --cached | rg '[A-Za-z]:[\\/](Users|Documents)|/home/[a-z]'
 
 | 条件 | 状态 |
 |---|---|
-| CI 绿 | 是（旧 HEAD `0effeec`，3/3 core + CodeRabbit check） |
-| 高危 review 已解决/记录 | 代码已修复；尚未 push，GitHub 线程未回复 |
-| 报告与代码一致 | 本地 v3 已一致；远端 HEAD 仍是 v2 |
+| CI 绿 | 是（`aea5241`，core ubuntu/windows/macos 3/3） |
+| 高危 review 已解决/记录 | 17 条 thread 已逐条回复并附落点；SID 复现修复见 §6 |
+| 报告与代码一致 | §6 修复后一致；此前 dialogue 调用缺 `--tts-sids` |
 | 未新增规则引擎/产品功能 | 是 |
 | 未改 `main` | 是 |
-| 未绕过门禁 | 是；`MIMOSA_GIT_GATE_MODE` 未在 ZCode 进程内改动 |
+| 未绕过门禁 | 是；Owner 按批准路径在独立 Git 环境提交，未改 Mimosa 状态 |
 
-**结论：不满足合并条件。** 需要 Owner 先放行 Mimosa、提交并推送这 15 个文件，更新 PR #6 正文
-与 review 线程，等新 HEAD CI 通过后再合入 `dev`。
+---
+
+## 6. Review 后续（`aea5241` 之后）
+
+CodeRabbit 在 17 条回复后追加核对：TTS 电池已用 8/9/10，但 `04-run-p1-matrix.ps1` 的
+dialogue 调用仍未传 `--tts-sids`，会退回探针默认 0/1/2。本机原始 run header 显示 6 个
+dialogue run（cpu4/cpu8/opencl × perf/quality）实际为 `[8,9,10]`，interaction/hybrid 为
+`[0,1,2]`，因此这是**复现脚本与已记录证据不一致**，不是测量错误。
+
+修复：`$providerArgs` 增加 `--tts-sids 8,9,10`；interaction/hybrid 保持默认 0/1/2，以匹配
+各自已记录的 header。该修复随下一次提交推送，并需在新 HEAD 上重跑 CI。
+
+## 7. 当前状态
+
+- `aea5241` 已推送；PR #6 正文已更新为 v3；17 条 review thread 已逐条回复。
+- 剩余合并条件：§6 的 SID 复现修复推送并通过 CI；之后合入 `dev`（不是 `main`）。

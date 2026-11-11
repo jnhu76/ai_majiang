@@ -387,12 +387,15 @@ foreach ($config in $Configs) {
 }
 if ($stages.Count -eq 0) { throw 'no runnable configuration' }
 
-# Fixture paths and provider arguments shared by real runs.
+# Fixture paths and provider arguments shared by the dialogue battery. The
+# recorded dialogue runs used tts_sids=[8,9,10]; interaction/hybrid keep the
+# probe default 0/1/2 to match their own recorded headers.
 $casesPath = Join-Path $repo 'benchmarks\p1_dialogue_cases.tsv'
 $ttsLinesPath = Join-Path $repo 'benchmarks\p1_tts_lines.tsv'
 $bankManifest = Join-Path $repo 'benchmarks\p1_bank_manifest.tsv'
 $providerArgs = @(
     '--llm', 'mnn', '--tts', 'sherpa',
+    '--tts-sids', '8,9,10',
     '--llm-sdk-label', 'MNN 24563667 CPU/OpenCL build', '--tts-sdk-label', 'sherpa-onnx v2.0.1',
     '--mnn-config', (Join-Path $mnnModel 'config.json'),
     '--tts-model', (Join-Path $vitsModel 'model.onnx'),
