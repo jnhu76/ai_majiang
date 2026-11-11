@@ -32,3 +32,15 @@ jobs:
           mkdir -p benchmarks/results
           if [[ "${{ runner.os }}" == "Windows" ]]; then exe="./build/Release/aimj_bench.exe"; else exe="./build/aimj_bench"; fi
           "$exe" --events 10 --hz 8 --llm-delay-ms 10 --tts-delay-ms 5 --out benchmarks/results/ci.jsonl
+  npc-contract:
+    name: npc-contract (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install jsonschema
+        run: python -m pip install jsonschema==4.23.0
+      - name: NPC contract self-test
+        run: python docs/npc/validate_examples.py --self-test
