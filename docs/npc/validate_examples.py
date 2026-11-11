@@ -2,12 +2,13 @@
 
 import argparse
 from copy import deepcopy
+from datetime import datetime
 import json
 from pathlib import Path
 import re
 import sys
 
-from jsonschema import Draft202012Validator, FormatChecker, ValidationError
+from jsonschema import Draft202012Validator, ValidationError
 
 HERE = Path(__file__).resolve().parent
 FIXTURES = HERE / "examples"
@@ -109,7 +110,7 @@ def validate_examples(schema, catalog, packs, proposal):
     ):
         root = {key: schema[key] for key in ("$schema", "$defs")}
         root["$ref"] = f"#/$defs/{kind}"
-        Draft202012Validator(root, format_checker=FormatChecker()).validate(example)
+        Draft202012Validator(root).validate(example)
 
     scenes = index(catalog["scenarios"], "scenario_id")
     pack_by_id = index(packs, "pack_id")
@@ -170,6 +171,10 @@ def validate_examples(schema, catalog, packs, proposal):
             require(trigger["requires_act"] in eligible_root_acts,
                     f"{scene['scenario_id']}: no eligible root dialogue_act")
 
+    try:
+        datetime.fromisoformat(proposal["generated_at"].replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError("proposal: invalid generated_at calendar date") from error
     require(proposal["scenario_id"] in scenes, "proposal: unknown scenario_id in fixtures")
     require(proposal["source_event_schema"] == f"scenario-catalog.v1@{catalog['catalog_revision']}",
             "proposal: unknown catalog revision in fixtures")
@@ -237,6 +242,8 @@ def self_test(schema, examples):
         ("shadowed match", claim_reaction, "match", {}, "catch-all"),
         ("invalid proposal revision ID", proposal, "supersedes", "wrong-id", None),
         ("self-referential proposal revision", proposal, "supersedes", proposal["proposal_id"], "self-reference"),
+        ("missing timezone", proposal, "generated_at", "2026-11-11T09:12:00", None),
+        ("invalid calendar date", proposal, "generated_at", "2026-02-30T09:12:00Z", "calendar date"),
     ]
     for label, obj, key, replacement, diagnostic in cases:
         original = obj.pop(key, None)

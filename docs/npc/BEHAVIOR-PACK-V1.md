@@ -38,7 +38,7 @@ CharacterPack 与 BehaviorPack 作为一对快照固定到整局。场外 Teache
 [Draft 2020-12 Schema](npc-v1.schema.json) 提供三种根结构
 `scenarioCatalog`、`behaviorPack`、`proposalMetadata`。它规定必填字段、
 封闭枚举、数值边界及数量上限，未知字段拒绝。JSON 重复成员名拒绝。
-日期格式验证需要开启 `date-time` 格式检查。触发器和守卫的执行语义见
+提案时间戳用带时区的 ISO 8601 子集，日期有效性由离线语义校验确认。触发器和守卫的执行语义见
 [Scenario Model](SCENARIO-MODEL.md)。
 
 - 目录 `scenario_id` 唯一。包内 `scenario_id`、`reaction_id` 和
