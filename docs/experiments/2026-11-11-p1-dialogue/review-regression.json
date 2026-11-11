@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "date": "2026-11-11",
+  "branch": "experiment/p1-dialogue-real",
+  "head": "0effeec",
+  "note": "Local regression evidence for staged review fixes; raw run output stays under gitignored tmp/.",
+  "retry_ownership": {
+    "command": "aimj_dialogue_probe --battery dialogue --rounds 1 --llm mock --tts mock --deadline-ms 1 --queue 2",
+    "events": 124,
+    "status_timeout": 124,
+    "unresolved": 0,
+    "raw_llm_text_nonempty": 124,
+    "fallback_used": 124,
+    "corrupt_event_ids": 0,
+    "note": "Late results are attributed to their own Work; no dangling retry pointer. A retry-specific timeout replay is not constructible with the fixed 10 ms mock delay."
+  },
+  "wav_boundary": {
+    "ctest": "1/1 passed",
+    "cases": [
+      "fmt chunk size 0xFFFFFFF0 is rejected as runtime_error, not bad_alloc",
+      "odd-sized fmt chunk (17 bytes) honors the RIFF pad byte before data"
+    ]
+  },
+  "merge_reviews": {
+    "human_confirmation_preserved": true,
+    "bad_header_exit_code": 1,
+    "dialogue_review_sha256_unchanged_after_bad_header": true
+  },
+  "audio_analysis": {
+    "files": 2,
+    "error_rows": 1,
+    "good_file_still_analyzed": true
+  },
+  "tts_qc": {
+    "missing_lines_exit_code": 1
+  },
+  "ttfc_p95_ms": {
+    "cpu4": 296.453,
+    "cpu8": 249.703,
+    "opencl": 264.368
+  }
+}

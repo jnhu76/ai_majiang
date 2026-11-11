@@ -82,7 +82,10 @@ void AiRuntime::run_llm() {
             r.status="timeout";r.text=req.fallback_line;r.fallback_used=true;
             r.end_to_end_ms=ms(Clock::now()-req.created);publish(std::move(r));continue;
         }
-        try {r.text=llm_->generate(req.prompt,req.speaker);r.llm_usage=llm_->last_usage();}
+        bool generated=false;
+        try {
+            r.text=llm_->generate(req.prompt,req.speaker);r.llm_usage=llm_->last_usage();generated=true;
+        }
         catch(const std::exception& e) {
             // Ask the provider for usage once more: a backend that failed after
             // generation started may still report the status that ended the call.
@@ -93,8 +96,20 @@ void AiRuntime::run_llm() {
         auto done=Clock::now();r.llm_ms=ms(done-start);
         // A model line that arrives after its turn is over must not be spoken,
         // but it stays auditable in raw_llm_text rather than being discarded.
-        if(req.session_id!=active_session_.load()) {r.status="stale";r.raw_llm_text=r.text;r.text.clear();}
-        else if(done>=req.deadline) {r.status="timeout";r.raw_llm_text=r.text;r.text=req.fallback_line;r.fallback_used=true;}
+        // Only a provider result may enter raw_llm_text: copying the fallback
+        // here would disguise an error as model output.
+        if(req.session_id!=active_session_.load()) {
+            r.status="stale";
+            if(generated) r.raw_llm_text=r.text;
+            r.text.clear();
+            r.fallback_used=false;
+        }
+        else if(done>=req.deadline) {
+            r.status="timeout";
+            if(generated) r.raw_llm_text=r.text;
+            r.text=req.fallback_line;
+            r.fallback_used=true;
+        }
         if(r.status!="ok") {
             r.end_to_end_ms=ms(done-req.created);publish(std::move(r));continue;
         }

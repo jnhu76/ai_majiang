@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "experiment": "2026-11-11-p1-dialogue-real",
-  "note": "Thresholds only. No measurements are stored here; p1_analyze.py computes every number from results.jsonl.",
+  "note": "Thresholds only. No measurements are stored here; p1_analyze.py computes p50/p95 (including ttfc_p95_ms) from results.jsonl.",
   "dialogue": {
     "auto_pass": "status==ok and required_missing==0 and violating_gate_hits==0 and truncated==false",
     "violating_gate_definition": "forbidden keyword hits that are non-negated, are not prompt echoes, and whose keyword does not appear in the prompt. Negated hits (不/没/无/别/非/未 within 4 code points before the hit) never count.",

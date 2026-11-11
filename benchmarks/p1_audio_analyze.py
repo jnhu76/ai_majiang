@@ -58,6 +58,8 @@ def read_wav(path: pathlib.Path) -> tuple[int, int, list[int]]:
         raise ValueError(f"unsupported sample width {bits}")
     if sample_rate <= 0:
         raise ValueError("zero sample rate")
+    if channels <= 0:
+        raise ValueError("zero or negative channel count")
     usable = (len(pcm) // (2 * channels)) * 2 * channels
     samples = list(struct.unpack(f"<{usable // 2}h", pcm[:usable]))
     return sample_rate, channels, samples
@@ -155,9 +157,25 @@ def analyze_file(path: pathlib.Path) -> dict:
     }
 
 
+def error_row(path: pathlib.Path, message: str) -> dict:
+    """A malformed WAV is a finding, not a reason to hide every other file."""
+    return {
+        "file": path.name, "sample_rate": 0, "channels": 0, "duration_s": 0.0,
+        "peak_dbfs": DB_FLOOR, "rms_dbfs": DB_FLOOR, "dc_offset": 0.0,
+        "clipped_samples": 0, "silence_pct": 0.0, "head_silence_s": 0.0,
+        "tail_silence_s": 0.0, "f0_mean_hz": 0.0,
+        "listen": f"error: {message}",
+    }
+
+
 def analyze_root(root: pathlib.Path) -> list[dict]:
-    files = sorted(root.rglob("*.wav"))
-    return [analyze_file(path) for path in files]
+    files: list[dict] = []
+    for path in sorted(root.rglob("*.wav")):
+        try:
+            files.append(analyze_file(path))
+        except (ValueError, OSError) as exc:
+            files.append(error_row(path, str(exc)))
+    return files
 
 
 def repo_confined(raw: str, option: str) -> pathlib.Path:
@@ -202,6 +220,7 @@ def main(argv: list[str]) -> int:
             "files": len(files),
             "total_clipped_samples": sum(item["clipped_samples"] for item in files),
             "sample_rates": sorted({item["sample_rate"] for item in files}),
+            "errors": sum(1 for item in files if str(item.get("listen", "")).startswith("error:")),
             "listen": "pending",
         },
     }

@@ -55,15 +55,25 @@ if ($rc -ne 0 -or $count -eq 0) { throw "clGetPlatformIDs rc=$rc platforms=$coun
 Write-Output "OpenCL ICD OK: rc=$rc platforms=$count"
 
 # 4) Record the hash in the experiment manifest for the pre-run assertion.
-$manifestPath = Join-Path $repo 'docs\experiments\2026-11-11-p1-dialogue-real\software-manifest.json'
-if (Test-Path $manifestPath) {
-    $manifest = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $manifest.mnn.dlls.opencl.sha256 = $sha
-    $manifest.mnn.dlls.opencl.opencl_symbols = $true
-    # PowerShell 5.1 Set-Content -Encoding UTF8 writes a BOM, which breaks JSON
-    # parsers; write UTF-8 without BOM explicitly.
-    [System.IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8),
-        [System.Text.UTF8Encoding]::new($false))
-    Write-Output "manifest updated: $manifestPath"
+# This is the same committed manifest 04-run-p1-matrix.ps1 reads; a missing
+# manifest is a hard failure, not a silent "OpenCL build ready".
+$manifestPath = Join-Path $repo 'docs\experiments\2026-11-11-p1-dialogue\software-manifest.json'
+if (-not (Test-Path $manifestPath)) { throw "manifest not found: $manifestPath" }
+$manifest = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $manifest.mnn) {
+    $manifest | Add-Member -NotePropertyName mnn -NotePropertyValue ([pscustomobject]@{})
 }
+if (-not $manifest.mnn.dlls) {
+    $manifest.mnn | Add-Member -NotePropertyName dlls -NotePropertyValue ([pscustomobject]@{})
+}
+if (-not $manifest.mnn.dlls.opencl) {
+    $manifest.mnn.dlls | Add-Member -NotePropertyName opencl -NotePropertyValue ([pscustomobject]@{})
+}
+$manifest.mnn.dlls.opencl.sha256 = $sha
+$manifest.mnn.dlls.opencl.opencl_symbols = $true
+# PowerShell 5.1 Set-Content -Encoding UTF8 writes a BOM, which breaks JSON
+# parsers; write UTF-8 without BOM explicitly.
+[System.IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8),
+    [System.Text.UTF8Encoding]::new($false))
+Write-Output "manifest updated: $manifestPath"
 Write-Output "OpenCL build ready: $dll"

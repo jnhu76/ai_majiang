@@ -871,7 +871,7 @@ void DialogueRunner::run(std::vector<Work> work, const std::string& scenario, bo
     (void)assert_s5;
     (void)assert_s6;
     scenario_ = scenario;
-    std::map<EventId, Work*> by_event;
+    std::map<EventId, Work> by_event;
     std::set<EventId> pre_flip;
     bool flip_done = false;
     std::string last_text;
@@ -881,7 +881,7 @@ void DialogueRunner::run(std::vector<Work> work, const std::string& scenario, bo
         if (chain_history && !last_text.empty())
             w.prompt += " 上一句台词是『" + last_text + "』；请承接最新事实但不要重复。";
     };
-    auto submit = [&](Work& w) -> bool {
+    auto submit = [&](Work& w) -> std::optional<EventId> {
         DialogueRequest req{};
         req.session_id = w.session;
         req.event_id = static_cast<EventId>(++event_seq_);
@@ -892,27 +892,31 @@ void DialogueRunner::run(std::vector<Work> work, const std::string& scenario, bo
         req.created = Clock::now();
         req.deadline = req.created + std::chrono::milliseconds(deadline_ms);
         const EventId eid = req.event_id;
-        by_event[eid] = &w;
+        // Store the work item by value: a blocking generate() may deliver after
+        // await_event() timed out, and a pointer to a stack retry would dangle.
+        by_event[eid] = w;
         if (!flip_done) pre_flip.insert(eid);
         const bool accepted = runtime_.submit(std::move(req));
         if (accepted) {
             ++offered_;
-        } else {
-            ++rejected_;
-            by_event.erase(eid);
-            RowMeta meta;
-            meta.status = "queue_rejected";
-            meta.prompt = w.prompt;
-            meta.formal = w.warmup_index == 0;
-            emit(*w.c, w, meta);
+            return eid;
         }
-        return accepted;
+        ++rejected_;
+        by_event.erase(eid);
+        RowMeta meta;
+        meta.status = "queue_rejected";
+        meta.prompt = w.prompt;
+        meta.formal = w.warmup_index == 0;
+        emit(*w.c, w, meta);
+        return std::nullopt;
     };
     auto drain = [&](std::optional<SpeechResult> result) -> std::optional<EmitResult> {
         if (!result) return std::nullopt;
         auto it = by_event.find(result->event_id);
         if (it == by_event.end()) return std::nullopt;
-        Work& w = *it->second;
+        // Move before erase: the map owns the Work now, and erase would destroy
+        // the object a reference points at.
+        Work w = std::move(it->second);
         by_event.erase(it);
         const Case& c = *w.c;
         RowMeta meta;
@@ -972,14 +976,20 @@ void DialogueRunner::run(std::vector<Work> work, const std::string& scenario, bo
                   << (meta.status == "ok" ? meta.text : std::string("(no audio)")) << '\n';
         return emitted;
     };
-    auto await = [&]() -> std::optional<SpeechResult> {
-        std::optional<SpeechResult> result;
+    // Wait for one specific event. Results for other events are emitted under
+    // their own Work item, so a late provider response can never be attributed
+    // to the next case.
+    auto await_event = [&](EventId want) -> std::optional<SpeechResult> {
         const auto until = Clock::now() + std::chrono::milliseconds(deadline_ms + 3000);
         while (Clock::now() < until) {
-            if ((result = runtime_.poll())) break;
-            std::this_thread::sleep_for(1ms);
+            if (auto result = runtime_.poll()) {
+                if (result->event_id == want) return result;
+                drain(std::move(result));
+            } else {
+                std::this_thread::sleep_for(1ms);
+            }
         }
-        return result;
+        return std::nullopt;
     };
     auto deliver_cache = [&](Work& w) -> bool {
         if (opt_.dialogue_mode != "cache") return false;
@@ -994,15 +1004,18 @@ void DialogueRunner::run(std::vector<Work> work, const std::string& scenario, bo
         // machinery decide rejection/expiry instead of the harness.
         for (std::size_t i = 0; i < work.size(); ++i) {
             Work& w = work[i];
+            // Flip at the work-item boundary, before the first session-2 item.
+            // Doing it after a submit skipped --switch-session-after 0 and any
+            // boundary item served from the bank cache.
+            if (i == switch_idx) {
+                runtime_.set_active_session(2);
+                flip_done = true;
+                std::cout << "[flip] active session -> 2 at work item " << switch_idx << '\n';
+            }
             append_history(w);
             w.session = i < switch_idx ? 1 : 2;
             if (deliver_cache(w)) continue;
             submit(w);
-            if (switch_idx < work.size() && i + 1 == switch_idx) {
-                runtime_.set_active_session(2);
-                flip_done = true;
-                std::cout << "[flip] active session -> 2 after " << switch_idx << " submissions\n";
-            }
         }
         const auto until = Clock::now() + std::chrono::milliseconds(deadline_ms + 180000);
         while (!by_event.empty() && Clock::now() < until) {
@@ -1014,11 +1027,17 @@ void DialogueRunner::run(std::vector<Work> work, const std::string& scenario, bo
     }
     for (std::size_t i = 0; i < work.size(); ++i) {
         Work& w = work[i];
+        if (i == switch_idx) {
+            runtime_.set_active_session(2);
+            flip_done = true;
+            std::cout << "[flip] active session -> 2 at work item " << switch_idx << '\n';
+        }
         append_history(w);
         w.session = i < switch_idx ? 1 : 2;
         if (deliver_cache(w)) continue;
-        if (!submit(w)) continue;
-        auto emitted = drain(await());
+        auto submitted = submit(w);
+        if (!submitted) continue;
+        auto emitted = drain(await_event(*submitted));
         if (opt_.dialogue_mode == "template" && w.attempt == 1 && emitted && emitted->ok) {
             // Mode B: machine check after generation; one constrained re-prompt
             // that may only reword. The first attempt's violation stays on record.
@@ -1032,8 +1051,7 @@ void DialogueRunner::run(std::vector<Work> work, const std::string& scenario, bo
                 retry.attempt = 2;
                 retry.first_try_violation = true;
                 retry.prompt = strict_retry_prompt(*w.c, reasons);
-                submit(retry);
-                drain(await());
+                if (auto retry_id = submit(retry)) drain(await_event(*retry_id));
             }
         }
     }
@@ -1118,14 +1136,6 @@ int main(int argc, char** argv) {
         rc.mode = (opt.llm == "mnn" && opt.tts == "sherpa") ? "real"
                   : (opt.llm == "mock" && opt.tts == "mock") ? "mock"
                                                             : "mixed";
-        if (opt.config_name.empty()) {
-            rc.config = opt.llm == "mock" ? "mock"
-                        : opt.mnn_backend == "opencl" ? "opencl"
-                        : opt.mnn_threads > 0 ? "cpu" + std::to_string(opt.mnn_threads)
-                                              : "cpu_default";
-        } else {
-            rc.config = opt.config_name;
-        }
 #ifdef AIMJ_WITH_MNN
         const OpenClDiagnostics opencl = opencl_diagnostics();
 #else
@@ -1149,6 +1159,17 @@ int main(int argc, char** argv) {
             }
         }
         rc.mnn_backend_effective = backend_effective;
+        // Derive the grouping label after backend resolution: a CPU fallback
+        // must never be aggregated into the OpenCL statistics.
+        if (opt.config_name.empty()) {
+            rc.config = opt.llm == "mock" ? "mock"
+                        : backend_effective == "opencl_verified" ? "opencl"
+                        : backend_effective == "cpu_fallback" ? "cpu_fallback"
+                        : opt.mnn_threads > 0 ? "cpu" + std::to_string(opt.mnn_threads)
+                                              : "cpu_default";
+        } else {
+            rc.config = opt.config_name;
+        }
         if (opt.inject_after >= 0) llm = std::make_unique<FaultInjectLlm>(std::move(llm), opt.inject_after);
 
         std::unique_ptr<ITtsBackend> tts;

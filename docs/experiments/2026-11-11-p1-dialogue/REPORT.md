@@ -1,4 +1,7 @@
-# P1 实验报告：真实 MNN 台词 + 真实 sherpa 语音（2026-11-11，v2 修订）
+# P1 实验报告：真实 MNN 台词 + 真实 sherpa 语音（2026-11-11，v3 review 收口）
+
+> v3 只做评审收口，不改原始测量：补算 ttfc p95；明确 B 是 post-hoc audit、C 未命中回退是 A、C 音频不作为声线证据；
+> 补充异常路径部分文本与 OpenCL preflight 语义；删除 §7 中不存在的 `--out` 参数。原始 `results.jsonl` 未改动。
 
 实验目标：让真实 MNN 模型（Pocket-0.3B INT4）开口、真实 sherpa-onnx 出声，在唯一实验机上测量
 CPU 4T / CPU 8T / AMD OpenCL 三种配置，给出 GO / CONDITIONAL GO / NO-GO。
@@ -37,8 +40,9 @@ CPU 4T / CPU 8T / AMD OpenCL 三种配置，给出 GO / CONDITIONAL GO / NO-GO�
   这是"无样本"标记而非测得值；s4 是故意过载专项，生效 per-request deadline 被场景代码钳到 5ms
   （`apps/cli/dialogue_probe.cpp:1434`），header 的 deadline_ms=800 只是请求值。
 - **gates run_ok_rate ≥0.95**：cpu4 274/279=0.982、cpu8 271/279=0.971、opencl 274/279=0.982，全部通过。
-- **gates ttfc p95 ≤2000：未测量。** `metrics.json` 只有 ttfc p50（201.204/201.204/203.263 ms），p95 从未计算——
-  该 gate 本轮无法判定，列入 §6 未测量项。
+- **gates ttfc p95 ≤2000：通过（v3 补算）。** `metrics.json` v3 起同时记录 p50/p95：
+  cpu4 210.033/296.453 ms、cpu8 201.204/249.703 ms、opencl 203.263/264.368 ms，p95 全部远低于 2000 ms。
+  （v2 只算了 p50，CR review 指出 gate 无对应值；本轮从同一批 status=ok、usage_valid=true 行补算，未改原始数据。）
 - **tts max_silence_pct=30：违标 5/37**（§2.4），该门不通过；gates 自身规定 listen=pending 时 TTS 封顶 CONDITIONAL GO。
 - **关键牌局事实错误零容忍：不通过。** 评审表初判 14/120 行 factual=false；任务材料另给定"独立复核确认 64 条问题行"——
   该 64 为**外部给定输入，本仓库无落盘明细、不可核验**（六个分组 CSV `benchmarks/results/p1/review/group-*.csv`
@@ -48,7 +52,7 @@ CPU 4T / CPU 8T / AMD OpenCL 三种配置，给出 GO / CONDITIONAL GO / NO-GO�
 
 | # | 条件 | 现状 | 验收标准 |
 |---|---|---|---|
-| 1 | 台词主路径换 bank/模板，模型自由生成退居实验特性 | bank 覆盖 7/31（22.6%），命中行机审 5/7 | 31 类事件预制覆盖 ≥80%，命中行机审 auto-pass 100%，bank 行绑定事件语义与声线-角色映射（修复 §4 所列 2 条张冠李戴与 attack_stale 错配） |
+| 1 | 台词主路径换 bank/模板，模型自由生成退居实验特性 | bank 覆盖 7/31（22.6%），命中行机审 5/7；B 的机审在 TTS 之后（post-hoc） | 31 类事件预制覆盖 ≥80%，命中行机审 auto-pass 100%，bank 行绑定事件语义与声线-角色映射（修复 §4 所列 2 条张冠李戴与 attack_stale 错配），且文本校验置于 TTS 之前 |
 | 2 | 机审+人工复核闭环 | 评审表 120 行 human_confirmation 全部 pending | 机审 auto-pass ≥90%，human_confirmation 全部落值，prompt-echo 行单独人工判定 |
 | 3 | sid 映射统一 | dialogue 电池/TTS 电池/声线推荐 = 8/9/10；interaction/hybrid = 0/1/2（§2.3） | 两条链路统一到同一映射并落盘（建议统一到 8/9/10） |
 | 4 | 播放层 + 首次可闻声 | `first_audible_ms` 全部 null（无播放层） | 接入播放层后实测 first_audible_ms p95，按任务口径 ≤1s 复验 |
@@ -79,7 +83,7 @@ CPU 4T / CPU 8T / AMD OpenCL 三种配置，给出 GO / CONDITIONAL GO / NO-GO�
   opencl：opencl_quality 3 条 P0 error + opencl_perf `persona_du` P1 error ×2；opencl_perf 另有 1 条 warmup timeout 行，按聚合口径不计），
   且运行无 seed（§6.4）——这些 error 更可能反映采样抖动而非配置差异。"cpu8 多败 3 条不构成否决"方向成立，但证据强度有限；
   cpu8 的推荐主要建立在 p95/RSS/prefill 三个稳定指标上。TTFC 三配置 p50 201–210 ms，流式首 token 延迟稳定。
-- **首选 cpu8，cpu4 为等效备选**；gates `ttfc_p95` 未测（§1）。
+- **首选 cpu8，cpu4 为等效备选**；gates `ttfc_p95` 已补算并通过（§1）。
 
 ### 2.2 模型能否可靠理解麻将事件？——不能可靠理解，偶发正确
 
@@ -195,7 +199,7 @@ gates 明文 listen=pending 时 TTS 维度封顶 CONDITIONAL GO——与 §1 判
 | 自然性 | **2** | 评审表 natural 均分 2.14/5，23/120 行得 1 分；s3 十二连发同一句；A 臂样本多为叠词空话。 |
 | 角色感 | **2** | 评审表 persona 均分 2.22/5；信号层三声线可分（speaker-selection.json，距离 0.31/0.53），但文本角色弱、interaction/hybrid 链路 sid 与电池不一致。 |
 | 语音质量 | **待人工听感确认** | 37/37 合成成功、0 削波、无截断证据、最小峰值余量 6.479 dB（程序化信号）；但静音门 5/37 违标（gates max_silence_pct=30）、sid8 偏小声、term_hu/term_gang 静音占比高均待人工；8 kHz 上限未在真实播放环境验证；gates 规定 listen=pending 时本维度封顶 CONDITIONAL GO。不给数字分。 |
-| 响应性 | **4** | **PCM 交付口径**（非可听口径）：顺序 e2e p95 429–479 ms、电池 p95 690–877 ms、s5 排队 p95 1264.574 ms，全部低于任务 2 s 可接受线与 gates 4000 ms 线；扣分：首次可闻声未测量（无播放层，PCM→可听差值未知）、gates 的 ttfc p95 未测、s4 过载行为在 5 ms 生效截止下测得。 |
+| 响应性 | **4** | **PCM 交付口径**（非可听口径）：顺序 e2e p95 429–479 ms、电池 p95 690–877 ms、s5 排队 p95 1264.574 ms，全部低于任务 2 s 可接受线与 gates 4000 ms 线；TTFC p95 249.703–296.453 ms 亦过 2000 ms gate。扣分：首次可闻声未测量（无播放层，PCM→可听差值未知）、s4 过载行为在 5 ms 生效截止下测得。 |
 
 ---
 
@@ -222,13 +226,25 @@ p95 线性插值），重算值与 metrics.json 的 p95 逐一吻合。
 
 要点：
 - B 把事件级事实通过从 18/31 提到 23/31，代价是 ~1.48× 模型调用和事件级 p95 升至 952.8 ms（任务 1s 优先线边缘内）。
+- **B 是 post-hoc quality audit，不是播放安全门（v3 明确）。** 实测链路是
+  `LLM → AiRuntime 内 TTS → PCM → emit() 内 score_text() → 违规才 retry`：第一条违规台词已经合成成 PCM/WAV，
+  才被机审判定；`dialogue_mode=template` 的 retry 也只是事后重生成。因此 B 的 23/31 只能读作"事后审计后的通过率"，
+  **不能读作"违规台词从未进入播放层"**。产品链路必须把文本校验插到 LLM 与 TTS 之间；
+  P2 已按此实现，并用"违规输出不得产生 PCM"的测试验证（见 P2 报告）。
+- **本实验的 C 未命中回退是 A，不是 B（v3 明确）。** `deliver_cache()` 未命中返回 false，随后走 `submit()` 的自由生成；
+  只有 `dialogue_mode=="template"` 才启用 B 的 retry，C 的 `dialogue_mode=="cache"` 不会自动切到 B。
+  所以"C 命中 + A 回退"是已实测结构；"C 骨架 + B 兜底"是下一阶段设计，不能把 B 的数字归给 C。
 - C 在本 bank 覆盖率（7/31≈22.6%）下整体时延与 A 几乎持平；命中行享受 1.25–2.67 ms 交付，
   其中 5/7 命中事实正确——"命中行事实完全可控"仅在 bank 行绑定事件语义后才成立（现状 2/7 张冠李戴）。
+- **C 的音频不能作为声线对比证据（v3 明确）。** bank 命中行播 8/9/10 预渲染 WAV，未命中行回退 0/1/2 实时 TTS，
+  且 `attack_stale` 存在 speaker2→sid10 错配；C 的时延/命中率仍是有效测量，但"哪个角色听起来像谁"不能引用 C。
+  修复项已转入 P2：Bank 条目按 `(event_type, public_fact_key, speaker, emotion)` 建键，音频与 sid/角色绑定后再交付。
 - prompt-echo 口径：三臂各 4–5 行带 violating_prompt_echo_hits（attack_injection 三臂同答"胡牌1000分"），
   按 `benchmarks/p1_gates.json` 的 prompt_echo_policy 不进 auto-pass、留人工复核；人工口径下每臂事实数至少再减 1。
 
-**推荐：以 C 为骨架（bank/模板为主路径，持续扩大事件覆盖并绑定事件语义与声线），未命中行用 B 的机审+一次受约束重试兜底；
-不推荐 A 直出。** 0.3B 的复读与编造不可通过提示词工程消除，只能通过"少用它、审它"来控制。
+**推荐（区分已实测与未来设计）：当前实测 C = Bank 命中 + A 自由生成回退；未来产品骨架 = Bank/模板主路径 + 先校验后 TTS + 确定性兜底。
+B 的事后审计只能作为离线质量对照，不能作为在线安全门；不推荐 A 直出。** 0.3B 的复读与编造不可通过提示词工程消除，
+只能通过"少用它、先审后播"来控制。
 
 ---
 
@@ -278,13 +294,21 @@ TTS 兜底占位符"（暂时无语音）"（status=error 行，非台词，但�
    同一输入不可复现；三配置失败集合互不相同（§2.1）即其后果；成功例不代表该配置稳定输出。
 5. **8 kHz 限制**：sherpa 输出固定 8000 Hz PCM（metrics.json tts.sample_rate=8000）。
    8 kHz 对可懂度/音质的上限未在真实播放链路验证。
-6. **gates ttfc p95**：gates 要求 ttfc p95 ≤2000 ms，metrics.json 仅有 ttfc p50（201–210 ms），p95 未计算，该 gate 未判定。
+6. **gates ttfc p95（v3 已补算）**：gates 要求 ttfc p95 ≤2000 ms；`metrics.json` v3 记录
+   cpu4 296.453 / cpu8 249.703 / opencl 264.368 ms，gate 通过。v2 仅有 p50，不能据此宣称通过，v3 才补齐。
 7. **OpenCL GPU 利用率与缓存门**：`gpu_utilization_pct_min=5.0` 无利用率数据；run header
    `opencl_cache_file_present_at_start=false`（gates `require_opencl_cache_file=true` 未满足证据）。
-   OpenCL 劣势仅由 decode tok/s 与 p95 支撑。
+   OpenCL 劣势仅由 decode tok/s 与 p95 支撑。`mnn_backend_effective=opencl_verified` 只证明
+   DLL 含 OpenCL 符号、ICD 应答、`set_config` 接受 opencl（preflight），**不是逐 kernel 的 GPU 归因**；
+   报告不把它当作"全部计算都在 GPU"的证据。
 8. **单次运行**：每个交互场景 1 次运行，无重复轮次统计；s1/s2 的 p95 样本量仅 1/2，只代表单点/两点插值。
 9. **语义级编造率**：机审只能抓关键词与禁止词；"抓不住语义编造"本身意味着真实编造率≥机审值，具体数值未测。
 10. **"独立复核确认 64 条问题行"明细**：任务材料给定的外部结论，本仓库无落盘明细，无法在仓库内核验或复算（§1）。
+11. **异常路径的部分生成文本**：`MnnBackend::generate()` 在抛出前没有把本地已生成的部分文本跨接口返回，
+    `AiRuntime::run_llm()` 随即用 fallback 覆盖；因此 `raw_llm_text` 只在 provider 成功返回（含事后 stale/timeout）时非空，
+    provider error 行为空。token 计数与 status_code 仍有效，但"失败时也能看到逐字原文"不成立；P2 如需该能力要扩展 typed outcome。
+12. **`textscore` 不是语义事实核验**：它只是关键词/否定/复读启发式；`auto_pass` 不等于可播放许可，
+    更不能替代 120 行人工确认。P2 的产品链路把校验放在 TTS 之前，但仍以结构化事件事实为边界，不做"语义真值"宣称。
 
 ---
 
@@ -333,7 +357,7 @@ build-real/Release/aimj_dialogue_probe.exe --battery hybrid --strategies P1 --ro
                                   #          --bank-dir benchmarks/results/p1/audio/tts_real
 
 # 聚合与分析（stdlib，python -I）
-python -I benchmarks/p1_analyze.py --root benchmarks/results/p1 --out benchmarks/results/p1 --merge-reviews
+python -I benchmarks/p1_analyze.py --root benchmarks/results/p1 --merge-reviews
 python -I benchmarks/p1_audio_analyze.py --root benchmarks/results/p1/audio --out benchmarks/results/p1
 python -I benchmarks/p1_tts_qc.py --provider sherpa
 ```

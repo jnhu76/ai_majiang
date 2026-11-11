@@ -110,13 +110,14 @@ static int run() {
         }
     }
     { // A model line that misses its deadline is replaced by the fallback but
-      // stays auditable: the raw text and the reason are not lost.
-        AiRuntime rt(std::make_unique<MockLlm>(30ms),std::make_unique<MockTts>(1ms),2);
-        auto req=*director.on_event(b[0],5ms);
+      // stays auditable: the raw text and the reason are not lost. Margins are
+      // wide enough that a loaded CI runner still dequeues before the deadline.
+        AiRuntime rt(std::make_unique<MockLlm>(300ms),std::make_unique<MockTts>(1ms),2);
+        auto req=*director.on_event(b[0],100ms);
         req.session_id=1;rt.set_active_session(1);
         CHECK(rt.submit(req));
         std::optional<SpeechResult> late;
-        for(int i=0;i<200 && !late;i++) {late=rt.poll();std::this_thread::sleep_for(2ms);}
+        for(int i=0;i<500 && !late;i++) {late=rt.poll();std::this_thread::sleep_for(2ms);}
         CHECK(late && late->status=="timeout");
         CHECK(late->fallback_used && !late->raw_llm_text.empty());
         CHECK(late->text!=late->raw_llm_text);
@@ -162,6 +163,33 @@ static int run() {
         try {read_pcm16_wav(bad);} catch(const std::runtime_error&) {rejected=true;}
         CHECK(rejected);
         std::filesystem::remove(bad);
+        // A corrupt fmt size must fail as runtime_error, not attempt a 4 GiB
+        // allocation. An odd-sized fmt chunk must still honor the RIFF pad byte.
+        auto huge=(std::filesystem::temp_directory_path()/"aimj_test_huge_fmt.wav").string();
+        {
+            std::ofstream f(huge,std::ios::binary);
+            f.write("RIFF",4);const char zero[4]={0,0,0,0};f.write(zero,4);f.write("WAVE",4);
+            f.write("fmt ",4);const char hugeSize[4]={static_cast<char>(0xF0),-1,-1,-1};
+            f.write(hugeSize,4);const char body[16]={};f.write(body,16);
+        }
+        rejected=false;
+        try {read_pcm16_wav(huge);} catch(const std::runtime_error&) {rejected=true;}
+        CHECK(rejected);
+        std::filesystem::remove(huge);
+        auto padded=(std::filesystem::temp_directory_path()/"aimj_test_padded_fmt.wav").string();
+        {
+            std::ofstream f(padded,std::ios::binary);
+            f.write("RIFF",4);const char zero[4]={0,0,0,0};f.write(zero,4);f.write("WAVE",4);
+            f.write("fmt ",4);const char oddSize[4]={17,0,0,0};f.write(oddSize,4);
+            const char fmt[16]={1,0,1,0,0x40,0x1F,0,0,static_cast<char>(0x80),0x3E,0,0,2,0,16,0};
+            f.write(fmt,16);const char bodyExtra=0;f.write(&bodyExtra,1);
+            const char pad=0;f.write(&pad,1);
+            f.write("data",4);const char dataSize[4]={2,0,0,0};f.write(dataSize,4);
+            const char sample[2]={0,0};f.write(sample,2);
+        }
+        auto paddedRead=read_pcm16_wav(padded);
+        CHECK(paddedRead.audio.sample_rate==8000 && paddedRead.audio.samples.size()==1);
+        std::filesystem::remove(padded);
     }
 #ifdef AIMJ_WITH_MNN
     { // An OpenCL request must never be answered by silent CPU fallback. On a

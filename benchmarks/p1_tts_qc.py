@@ -38,7 +38,8 @@ def _load_analyzer():
 def load_lines(path: pathlib.Path) -> dict[str, dict]:
     mapping: dict[str, dict] = {}
     if not path.is_file():
-        return mapping
+        # Without the fixture the speaker/F0 section would be silently empty.
+        raise SystemExit(f"lines file not found: {path}")
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
             line = line.rstrip("\r\n")
@@ -74,7 +75,7 @@ def repo_confined(raw: str, option: str) -> pathlib.Path:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="TTS quality report (stdlib only).")
     parser.add_argument("--wav-dir", required=True, type=lambda v: repo_confined(v, "--wav-dir"))
-    parser.add_argument("--lines", default="benchmarks/p1_tts_lines.tsv",
+    parser.add_argument("--lines", default=str(HERE / "p1_tts_lines.tsv"),
                         type=lambda v: repo_confined(v, "--lines"))
     parser.add_argument("--provider", default="unknown", choices=["mock", "sherpa", "unknown"])
     parser.add_argument("--out", type=lambda v: repo_confined(v, "--out"),

@@ -27,22 +27,30 @@ $mnn = Join-Path $tp 'MNN'
 $mnnModel = Join-Path $tp 'models\MNN-Pocket-0.3B-MNN'
 $sherpaRoot = Join-Path $tp 'sherpa-onnx-extract\sherpa-onnx-v2.0.1-win-x64-shared-MD-Release'
 $vitsModel = Join-Path $tp 'models\vits-icefall-zh-aishell3'
-$expDir = Join-Path $repo 'docs\experiments\2026-11-11-p1-dialogue-real'
+$expDir = Join-Path $repo 'docs\experiments\2026-11-11-p1-dialogue'
 $manifestPath = Join-Path $expDir 'software-manifest.json'
 if (-not [System.IO.Path]::IsPathRooted($ResultsRoot)) { $ResultsRoot = Join-Path $repo $ResultsRoot }
 # Smoke runs keep their scratch provenance under the (gitignored) results root;
-# only real runs write committed evidence under docs/.../runs/.
+# only real runs write sanitized evidence under docs/.../runs/. The transcript
+# always stays in the gitignored results tree: its header carries the local
+# user, host and host application and must never enter committed evidence.
 $runDir = if ($SmokeOnly) { Join-Path $ResultsRoot "runs\$RunId" }
           else { Join-Path $expDir "runs\$RunId" }
 New-Item -ItemType Directory -Force $runDir | Out-Null
 New-Item -ItemType Directory -Force $ResultsRoot | Out-Null
-$runnerLog = Join-Path $runDir 'runner.out'
-try { Start-Transcript -Path $runnerLog -Force | Out-Null } catch { }
+$logDir = Join-Path $ResultsRoot "runs\$RunId"
+New-Item -ItemType Directory -Force $logDir | Out-Null
+$runnerLog = Join-Path $logDir 'runner.out'
+try { Start-Transcript -Path $runnerLog -Force | Out-Null }
+catch { Write-Warning "transcript unavailable: $($_.Exception.Message)" }
 
 Write-Output "repo=$repo"
 Write-Output "results=$ResultsRoot"
 Write-Output "run_id=$RunId"
 
+if (-not (Test-Path $manifestPath)) {
+    throw "manifest not found: $manifestPath (the committed P1 manifest must exist before a run)"
+}
 $manifest = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $configMap = @{
     cpu4   = @{ backend = 'cpu';    threads = 4; build = 'build-real-cpu';    mnn = 'build-mnn';        mnnKey = 'cpu' }
@@ -59,6 +67,24 @@ function Write-JsonFile([string]$Path, $Value) {
 function Get-Sha256([string]$Path) {
     if (-not (Test-Path $Path)) { return $null }
     return (Get-FileHash -Algorithm SHA256 -Path $Path).Hash.ToLower()
+}
+function Convert-ToRepoRelative([string]$Path) {
+    # Committed evidence uses placeholders instead of the local absolute paths
+    # that provenance/opencl records otherwise inherit from this machine.
+    if (-not $Path) { return $Path }
+    $full = [System.IO.Path]::GetFullPath($Path)
+    $roots = @(
+        @{ Root = [System.IO.Path]::GetFullPath($repo).TrimEnd('\'); Label = '<repo>' },
+        @{ Root = [System.IO.Path]::GetFullPath($extern).TrimEnd('\'); Label = '<extern>' }
+    )
+    foreach ($item in $roots) {
+        if ($full -ieq $item.Root) { return $item.Label }
+        $prefix = $item.Root + '\'
+        if ($full.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $item.Label + '/' + $full.Substring($prefix.Length).Replace('\', '/')
+        }
+    }
+    return '<external>/' + [System.IO.Path]::GetFileName($Path)
 }
 function Quote-Arg([string]$Value) {
     if ($Value -match '[\s"]') { return '"' + ($Value -replace '"', '\"') + '"' }
@@ -126,12 +152,37 @@ function Invoke-Probe {
     }
     return [pscustomobject]@{ ExitCode = $exitCode; GpuCsv = $gpuCsv; ErrorOut = $errorOut }
 }
+function Convert-EvidenceText([string]$Text) {
+    # Run headers and console lines carry absolute model/DLL paths. Replace both
+    # the raw and JSON-escaped/forward-slash forms before evidence is committed.
+    if (-not $Text) { return $Text }
+    $roots = @(
+        @{ Root = [System.IO.Path]::GetFullPath($repo).TrimEnd('\'); Label = '<repo>' },
+        @{ Root = [System.IO.Path]::GetFullPath($extern).TrimEnd('\'); Label = '<extern>' }
+    )
+    foreach ($item in $roots) {
+        foreach ($variant in @($item.Root, ($item.Root -replace '\\', '\\'), ($item.Root -replace '\\', '/'))) {
+            $Text = $Text.Replace($variant, $item.Label)
+        }
+    }
+    return $Text
+}
 function Save-Evidence {
     param([string]$EvidenceDir, [string]$Jsonl, [string]$ConsoleOut, [string]$GpuCsv, [string]$ErrorOut)
     New-Item -ItemType Directory -Force $EvidenceDir | Out-Null
-    if (Test-Path $Jsonl) { Copy-Item $Jsonl (Join-Path $EvidenceDir 'results.jsonl') -Force }
-    if (Test-Path $ConsoleOut) { Copy-Item $ConsoleOut (Join-Path $EvidenceDir 'console.out') -Force }
-    if ($ErrorOut -and (Test-Path $ErrorOut)) { Copy-Item $ErrorOut (Join-Path $EvidenceDir 'console.err.out') -Force }
+    $utf8 = [System.Text.UTF8Encoding]::new($false)
+    if (Test-Path $Jsonl) {
+        $text = Get-Content $Jsonl -Raw -Encoding UTF8
+        [System.IO.File]::WriteAllText((Join-Path $EvidenceDir 'results.jsonl'), (Convert-EvidenceText $text), $utf8)
+    }
+    if (Test-Path $ConsoleOut) {
+        $text = Get-Content $ConsoleOut -Raw -Encoding UTF8
+        [System.IO.File]::WriteAllText((Join-Path $EvidenceDir 'console.out'), (Convert-EvidenceText $text), $utf8)
+    }
+    if ($ErrorOut -and (Test-Path $ErrorOut)) {
+        $text = Get-Content $ErrorOut -Raw -Encoding UTF8
+        [System.IO.File]::WriteAllText((Join-Path $EvidenceDir 'console.err.out'), (Convert-EvidenceText $text), $utf8)
+    }
     if ($GpuCsv -and (Test-Path $GpuCsv)) { Copy-Item $GpuCsv (Join-Path $EvidenceDir 'gpu.csv') -Force }
 }
 function New-CalibrationCases([string]$OutTsv) {
@@ -218,21 +269,21 @@ function Write-Provenance([string]$Phase) {
     foreach ($config in $configMap.Keys) {
         $exe = Join-Path (Join-Path $repo $configMap[$config].build) 'Release\aimj_dialogue_probe.exe'
         $dll = Join-Path (Join-Path $repo $configMap[$config].mnn) 'Release\MNN.dll'
-        $provenance.probe[$config] = @{ path = $exe; sha256 = Get-Sha256 $exe }
-        $provenance.mnn_dlls[$config] = @{ path = $dll; sha256 = Get-Sha256 $dll }
+        $provenance.probe[$config] = @{ path = (Convert-ToRepoRelative $exe); sha256 = Get-Sha256 $exe }
+        $provenance.mnn_dlls[$config] = @{ path = (Convert-ToRepoRelative $dll); sha256 = Get-Sha256 $dll }
     }
     foreach ($file in @('config.json', 'llm.mnn', 'llm.mnn.weight', 'tokenizer.mtok')) {
         $path = Join-Path $mnnModel $file
-        $provenance.model[$file] = @{ path = $path; sha256 = Get-Sha256 $path }
+        $provenance.model[$file] = @{ path = (Convert-ToRepoRelative $path); sha256 = Get-Sha256 $path }
     }
     $provenance.sherpa = @{
-        root = $sherpaRoot
+        root = (Convert-ToRepoRelative $sherpaRoot)
         version = 'v2.0.1'
         c_api_dll_sha256 = Get-Sha256 (Join-Path $sherpaRoot 'lib\sherpa-onnx-c-api.dll')
     }
     foreach ($file in @('model.onnx', 'tokens.txt', 'lexicon.txt', 'rule.far')) {
         $path = Join-Path $vitsModel $file
-        $provenance.vits[$file] = @{ path = $path; sha256 = Get-Sha256 $path }
+        $provenance.vits[$file] = @{ path = (Convert-ToRepoRelative $path); sha256 = Get-Sha256 $path }
     }
     foreach ($file in @('benchmarks\p1_dialogue_cases.tsv', 'benchmarks\p1_tts_lines.tsv', 'benchmarks\p1_bank_manifest.tsv')) {
         $path = Join-Path $repo $file
@@ -318,6 +369,9 @@ foreach ($config in $Configs) {
                 if (-not (Test-Path (Join-Path $repo 'build-mnn-opencl\Release\MNN.dll'))) {
                     & (Join-Path $PSScriptRoot '01b-build-mnn-opencl.ps1')
                     if ($LASTEXITCODE -ne 0) { throw '01b-build-mnn-opencl.ps1 failed' }
+                    # 01b pins the freshly built hash; reload so New-Stage does not
+                    # compare it against the pre-build manifest.
+                    $manifest = Get-Content $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
                 }
                 Configure-Integration $configMap[$config].build $configMap[$config].mnn
             }
@@ -455,17 +509,17 @@ foreach ($config in @($Configs)) {
             $openclEvidence = [ordered]@{
                 config                 = $config
                 backend_effective      = $header.mnn_backend_effective
-                mnn_dll_path           = $header.mnn_dll_path
+                mnn_dll_path           = (Convert-ToRepoRelative $header.mnn_dll_path)
                 mnn_dll_sha256         = $header.mnn_dll_sha256
                 mnn_dll_opencl_symbols = $header.mnn_dll_opencl_symbols
                 icd_available          = $header.opencl_icd_available
                 icd_detail             = $header.opencl_icd_detail
-                cache_file             = $cacheFile
+                cache_file             = (Convert-ToRepoRelative $cacheFile)
                 cache_present          = $cachePresent
                 cache_bytes            = if ($cachePresent) { (Get-Item $cacheFile).Length } else { 0 }
                 cache_sha256           = Get-Sha256 $cacheFile
                 gpu_util_max_pct       = $gpuUtil
-                gpu_samples            = $result.GpuCsv
+                gpu_samples            = (Convert-ToRepoRelative $result.GpuCsv)
                 checked_at             = (Get-Date).ToString('o')
             }
             Write-JsonFile (Join-Path $runDir "opencl-evidence-$config.json") $openclEvidence
@@ -487,7 +541,8 @@ foreach ($config in @($Configs)) {
     }
 }
 
-# TTS battery (real sherpa, 37 fixtures, explicit role->sid mapping 0,1,2).
+# TTS battery (real sherpa, 37 fixtures). The committed run header records
+# tts_sids=[8,9,10]; pass the same mapping so a reproduction keeps the voices.
 $ttsStage = if ($stages.ContainsKey('cpu4')) { $stages['cpu4'] } else { $stages[@($stages.Keys)[0]] }
 $ttsId = 'tts_real'
 $ttsJsonl = Join-Path $ResultsRoot "audio\$ttsId\results.jsonl"
@@ -495,7 +550,7 @@ $ttsConsole = Join-Path $ResultsRoot "audio\$ttsId\console.out"
 $ttsResult = Invoke-Probe -Exe (Join-Path $ttsStage 'aimj_dialogue_probe.exe') -WorkDir $ttsStage `
     -ProbeArgs (@('--battery', 'tts_lines', '--tts-lines', $ttsLinesPath,
         '--output', (Join-Path $ResultsRoot 'audio'), '--run-id', $ttsId,
-        '--tts-sids', '0,1,2', '--force') + $ttsArgs) `
+        '--tts-sids', '8,9,10', '--force') + $ttsArgs) `
     -ConsoleOut $ttsConsole -Label 'tts-battery'
 Save-Evidence -EvidenceDir (Join-Path $runDir 'tts-battery') -Jsonl $ttsJsonl `
     -ConsoleOut $ttsConsole -ErrorOut $ttsResult.ErrorOut

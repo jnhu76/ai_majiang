@@ -60,12 +60,16 @@ WavReadResult read_pcm16_wav(const std::string& path) {
         std::uint32_t size=read_le32(chunk+4);
         if(id=="fmt ") {
             if(size<16) throw std::runtime_error("short fmt chunk: "+path);
+            // The size comes from the file; cap it before allocating so a
+            // corrupt header fails as a runtime_error instead of bad_alloc.
+            if(size>1024) throw std::runtime_error("fmt chunk too large: "+path);
             std::vector<char> fmt(size);
             f.read(fmt.data(),static_cast<std::streamsize>(size));
             if(f.gcount()!=static_cast<std::streamsize>(size)) throw std::runtime_error("truncated fmt chunk: "+path);
             format=read_le16(fmt.data());channels=read_le16(fmt.data()+2);
             sample_rate=read_le32(fmt.data()+4);bits=read_le16(fmt.data()+14);
             have_fmt=true;
+            if(size&1u) f.seekg(1,std::ios::cur); // RIFF chunk padding
         } else if(id=="data") {
             if(size > (1u<<28)) throw std::runtime_error("data chunk too large: "+path);
             data.resize(size);

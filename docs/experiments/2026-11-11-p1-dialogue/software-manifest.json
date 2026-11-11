@@ -1,6 +1,22 @@
 {
   "record_date": "2026-11-11",
   "experiment": "P1 dialogue-real software manifest",
+  "mnn": {
+    "commit": "24563667d4c923a6f67591a0132141a84b1e2ebb",
+    "dlls": {
+      "cpu": {
+        "path": "build-mnn/Release/MNN.dll",
+        "sha256": "a32de91e6fc9222db745bda89901fa85443428d7dce25a0a2ba60933d55928de",
+        "opencl_symbols": false
+      },
+      "opencl": {
+        "path": "build-mnn-opencl/Release/MNN.dll",
+        "sha256": "1d5a054f605cb44296d97b8d27e7f077a5ae4d48be9ead1de499f82ce6bb53cf",
+        "opencl_symbols": true
+      }
+    },
+    "note": "Paths are repository-relative build trees. 01b pins the OpenCL hash when it builds; 04 refuses a staged DLL whose hash differs."
+  },
   "mnn_runtime": {
     "commit": "24563667d4c923a6f67591a0132141a84b1e2ebb",
     "commit_date": "2026-11-10 16:46:46 +0800",

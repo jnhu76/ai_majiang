@@ -219,6 +219,7 @@ def merge_configs(runs: list[tuple[dict, list[dict]]]) -> list[dict]:
             "p50_pcm_ms": r3(percentile(pcm, 50)),
             "p95_pcm_ms": r3(percentile(pcm, 95)),
             "ttfc_p50_ms": r3(percentile(ttfc, 50)),
+            "ttfc_p95_ms": r3(percentile(ttfc, 95)),
             "prefill_tok_s": r3(prompt_tokens / (prefill_ms / 1000.0)) if prefill_ms > 0 else 0.0,
             "decode_tok_s": r3(gen_tokens / (decode_ms / 1000.0)) if decode_ms > 0 else 0.0,
             "peak_rss_mb": r3(peak_rss / (1024.0 * 1024.0)),
@@ -328,17 +329,35 @@ def merge_reviews(root: pathlib.Path) -> pathlib.Path:
     review_dir = root / "review"
     files = sorted(review_dir.glob("group-*.csv")) if review_dir.is_dir() else []
     root.mkdir(parents=True, exist_ok=True)
-    with out.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(REVIEW_HEADER + ["human_confirmation"])
-        for path in files:
-            with path.open("r", encoding="utf-8-sig", newline="") as source:
-                reader = csv.DictReader(source)
-                if reader.fieldnames != REVIEW_HEADER:
-                    raise SystemExit(
-                        f"{path}: expected header {','.join(REVIEW_HEADER)}, got {reader.fieldnames}")
+    # Validate every group file before touching the evidence CSV: a bad header
+    # must not leave a truncated dialogue-review.csv behind.
+    merged: list[dict] = []
+    for path in files:
+        with path.open("r", encoding="utf-8-sig", newline="") as source:
+            reader = csv.DictReader(source)
+            if reader.fieldnames != REVIEW_HEADER:
+                raise SystemExit(
+                    f"{path}: expected header {','.join(REVIEW_HEADER)}, got {reader.fieldnames}")
+            merged.extend(reader)
+    # A re-merge must not reset a reviewer's recorded confirmation.
+    previous: dict[tuple[str, str, str], str] = {}
+    if out.is_file():
+        with out.open("r", encoding="utf-8-sig", newline="") as source:
+            reader = csv.DictReader(source)
+            if reader.fieldnames and "human_confirmation" in reader.fieldnames:
                 for row in reader:
-                    writer.writerow([row[name] for name in REVIEW_HEADER] + ["pending"])
+                    value = (row.get("human_confirmation") or "").strip()
+                    if value and value.lower() != "pending":
+                        key = (row.get("case_id", ""), row.get("strategy", ""), row.get("persona", ""))
+                        previous[key] = value
+    tmp = out.with_name(out.name + ".tmp")
+    with tmp.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow([*REVIEW_HEADER, "human_confirmation"])
+        for row in merged:
+            key = (row.get("case_id", ""), row.get("strategy", ""), row.get("persona", ""))
+            writer.writerow([row[name] for name in REVIEW_HEADER] + [previous.get(key, "pending")])
+    tmp.replace(out)
     return out
 
 
